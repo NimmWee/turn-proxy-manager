@@ -1,6 +1,16 @@
-# Этап 2: результат первого рабочего шага
+# Этап 2: metadata, управление legacy и подготовка startup
 
 Дата: 10.11.2026, Asia/Tomsk. Работа выполняется без субагентов. Это работающий фундамент этапа 2; полная приёмка этапа ещё открыта.
+
+## Обновление managed migration
+
+На тестовом VPS выполнен `scripts/verify_managed.py --test-vps-apply`: root adoption двух исходных устройств с проверкой live public key/PSK/IP/IPv6 и persistent config. Теги ownership добавлены без изменения ключей, CID и выданного iPhone-профиля. Повтор adoption идемпотентен. Metadata-флаг без соответствующего root registry не разрешает legacy-операцию.
+
+Отозван и возвращён неактивный Android peer; iPhone не затрагивался. Синтетический третий WG peer добавлен и удалён. Новый `ftm.compat status` подтвердил состояния с 1/2/3 peers; фильтр профилей исключает отозванный Android. На завершении снова два исходных peer, SSH и FreeTurn MainPID прежние. Это не Android-клиентский E2E и не live тест нового CID.
+
+`ftm.startup --prepare` умеет сохранить pending desired state до поднятия интерфейса, без вызовов WG set и без изменения живого VPN. Он требует root-owned private SQLite и не рассчитан на будущую API-writable DB. Конфликт блокирует startup вместо загрузки старых прав. `scripts/verify_startup.py --test-vps` проверил копию SQLite/registry/config в отдельном namespace: pending revoke → 1 peer, enable + add → 3 peers, revoke → 2 peers через настоящий `wg setconf`. Живые configs/profile/registry и процессы SSH/FreeTurn не изменились.
+
+**Текущая проверка:** 77/77 Manager tests PASS на Ubuntu VPS; Windows 73 PASS и 4 Linux-only skips. Ни systemd hook, ни `/opt/ftm`, ни новый `/usr/local/bin/vps-vk` пока не установлены. Reboot и общий managed encrypted restore ещё NOT RUN. Очередь продолжения: [NIGHT_WORK.md](NIGHT_WORK.md). Следующие разделы сохраняют историю первого checkpoint.
 
 ## Подтверждение iPhone и восстановление
 
@@ -66,8 +76,8 @@ Metadata-команда сама сеть не меняет. Agent CLI треб�
 
 ## Оставшиеся gates и следующий шаг
 
-1. **Managed startup migration и legacy compatibility.** Отзыв/отключение импортированных старых устройств пока отклоняется до изменения metadata — активный iPhone защищён. Их исходные конфиги/приватные профили остаются в baseline state. Нельзя выдавать это за полный revoke legacy.
-2. Legacy `vps-vk status` всё ещё ожидает два peers; при новых активных manager peers это ограничение старого CLI. В проверке третий peer отозван, сейчас исходный status снова здоров. Нужен адаптер динамического status/profiles и управляемой загрузки перед обычным использованием дополнительных устройств.
+1. **Managed startup deployment.** Явный root adoption и legacy revoke/enable уже проверены. Подготовка persistent state проверена изолированно; нужно установить root runtime/startup hook и проверить восстановление/загрузку хоста. Исходные приватные профили остаются в baseline state; это архив ключей, а не разрешение доступа.
+2. Совместимый dynamic status/profiles реализован и проверен как `python3 -m ftm.compat`. Системный legacy `vps-vk` пока не заменён: он ожидает два peers, а его install/restore нельзя запускать поверх adopted state. Нужна установка wrapper после общего checkpoint.
 3. Нет постоянного agent service/Unix IPC, автоматического reconciler timer и web RBAC. Сейчас apply — отдельная root-only команда. Разделение прав DB/API/agent и защита IPC необходимы до FastAPI.
 4. CID файл обновлён атомарно, исходник подтверждает polling 10 с. **Live авторизация нового CID через настоящий FreeTurn-клиент не проверена.** Три одновременных реальных устройства также не проверены.
 5. Адреса отозванных устройств пока сохраняются в истории и не выдаются повторно. Пул новых устройств `.10–.254`; reuse потребует подтверждённой очистки actual state.

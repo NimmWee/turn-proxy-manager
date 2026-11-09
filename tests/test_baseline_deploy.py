@@ -41,7 +41,8 @@ class BaselineDeployTests(unittest.TestCase):
             app.configure_fail2ban()
             return 0
 
-        with patch.object(app, "main", side_effect=main), patch("ftm.baseline_deploy.configure") as policy:
+        with patch.object(app, "main", side_effect=main), patch("ftm.baseline_deploy.configure") as policy, \
+             patch("ftm.baseline_deploy.check_baseline_only"):
             self.assertEqual(run_baseline_install("/root/private-vk", "93.184.216.34", qr=True), 0)
             policy.assert_called_once_with()
         self.assertEqual(observed[0][0], "install")
@@ -55,7 +56,8 @@ class BaselineDeployTests(unittest.TestCase):
         app = baseline_module()
         original_policy = app.configure_fail2ban
         original_argv = sys.argv
-        with patch.object(app, "main", side_effect=RuntimeError("install failed")):
+        with patch.object(app, "main", side_effect=RuntimeError("install failed")), \
+             patch("ftm.baseline_deploy.check_baseline_only"):
             with self.assertRaises(RuntimeError):
                 run_baseline_install("/root/private-vk", "93.184.216.34")
         self.assertIs(app.configure_fail2ban, original_policy)

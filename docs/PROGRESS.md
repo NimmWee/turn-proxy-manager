@@ -4,6 +4,10 @@
 
 ## Текущий этап
 
+**Обновление managed migration:** на тестовом VPS явно приняты под управление оба legacy peer; revoke/enable неактивного Android peer и dynamic status 1/2/3 peers PASS, профиль iPhone сохранён. Отложенные add/revoke/enable проверены на копии SQLite/config с настоящим WG в отдельном network namespace. Текущие тесты: **77/77 Manager на VPS**, Windows 73 PASS / 4 Linux skips; SHA256 всех 23 baseline файлов совпали. `/opt/ftm`, совместимый системный wrapper, startup hook и общий encrypted restore ещё не установлены. Старые результаты ниже описывают предыдущие checkpoints.
+
+По поручению пользователя включены почасовые запуски разработки в этом чате до **10.11.2026 09:20 Asia/Tomsk**. Очередь и точное состояние передачи: [NIGHT_WORK.md](NIGHT_WORK.md). Это не обещание завершения всего ТЗ за ночное окно.
+
 **iPhone E2E подтверждён, recovery/rollback проверены; реализована первая рабочая часть этапа 2.** Пользователь подтвердил интернет и IP через Anton48; сервер подтвердил handshake/rx/tx. На тестовом VPS работают SQLite metadata и отдельный root-only hot peer agent. После синтетической проверки остаются два исходных активных устройства, профиль iPhone не менялся. Android для этой установки NOT RUN. [Подробный результат этапа 2 и оставшиеся gates](STAGE2_PROGRESS.md).
 
 ## Что реализовано

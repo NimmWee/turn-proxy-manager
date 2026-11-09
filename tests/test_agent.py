@@ -13,6 +13,11 @@ from tests.test_store import key
 class FakeWireGuard:
     def __init__(self, state):
         self.peers = {peer["public_key"] for peer in state["clients"].values()}
+        from ftm.legacy import baseline_module
+        app = baseline_module()
+        self.psks = {peer["public_key"]: peer["preshared_key"] for peer in state["clients"].values()}
+        self.allowed = {state["clients"][name]["public_key"]: [app.address(state, last) + "/32", app.v6prefix(state) + str(last) + "/128"]
+                        for name, last in [("iphone", 2), ("android", 3)]}
         self.commands = []
         self.fail = False
         self.psk_seen = False
@@ -22,7 +27,9 @@ class FakeWireGuard:
         if args == ["wg", "show", "vkvpn0", "peers"]:
             return "\n".join(sorted(self.peers))
         if args == ["wg", "show", "vkvpn0", "allowed-ips"]:
-            return ""
+            return "\n".join(key + "\t" + ", ".join(values) for key, values in self.allowed.items() if key in self.peers)
+        if args == ["wg", "show", "vkvpn0", "preshared-keys"]:
+            return "\n".join(key + "\t" + value for key, value in self.psks.items() if key in self.peers)
         if args[:4] == ["wg", "set", "vkvpn0", "peer"]:
             if self.fail:
                 raise RuntimeError("network failure")
@@ -31,6 +38,8 @@ class FakeWireGuard:
             else:
                 self.assert_private_psk(Path(args[6]))
                 self.peers.add(args[4])
+                self.allowed[args[4]] = args[8].split(",")
+                self.psks[args[4]] = Path(args[6]).read_text().strip()
             return ""
         raise AssertionError("Unexpected command")
 

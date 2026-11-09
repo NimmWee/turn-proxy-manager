@@ -36,6 +36,7 @@ def main(argv=None):
     create.add_argument("--public-key-file", type=Path, required=True)
     create.add_argument("--request-id", required=True)
     devices.add_parser("revoke").add_argument("device_id")
+    devices.add_parser("enable").add_argument("device_id")
     args = parser.parse_args(argv)
     try:
         store = Store(args.db)
@@ -66,6 +67,9 @@ def main(argv=None):
             public = args.public_key_file.read_text(encoding="ascii").strip()
             device = store.create_device(args.user_id, args.name, args.platform, public, args.request_id)
             result = {"id": device["id"], "ip": device["ip"], "state": device["state"], "network_apply_required": True}
+        elif args.action == "enable":
+            store.set_device_enabled(args.device_id, True)
+            result = {"enable_queued": True, "network_apply_required": True}
         else:
             store.revoke_device(args.device_id)
             result = {"revocation_queued": True, "network_apply_required": True}

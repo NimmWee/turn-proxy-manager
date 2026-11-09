@@ -190,7 +190,7 @@ class Store:
             device = db.execute("SELECT * FROM devices WHERE id=?", (identifier,)).fetchone()
             if device is None:
                 raise ValidationError("Device not found")
-            if device["origin"] == "legacy":
+            if device["origin"] == "legacy" and not db.execute("SELECT 1 FROM settings WHERE key='managed_legacy_adopted' AND value='1'").fetchone():
                 raise ValidationError("Legacy revocation requires managed startup migration")
             if not device["enabled"]:
                 return
@@ -205,7 +205,8 @@ class Store:
         with self.transaction() as db:
             if db.execute("SELECT id FROM users WHERE id=?", (identifier,)).fetchone() is None:
                 raise ValidationError("User not found")
-            if not enabled and db.execute("SELECT id FROM devices WHERE user_id=? AND origin='legacy' AND enabled=1", (identifier,)).fetchone():
+            if (not enabled and db.execute("SELECT id FROM devices WHERE user_id=? AND origin='legacy' AND enabled=1", (identifier,)).fetchone()
+                    and not db.execute("SELECT 1 FROM settings WHERE key='managed_legacy_adopted' AND value='1'").fetchone()):
                 raise ValidationError("Legacy user disable requires managed startup migration")
             db.execute("UPDATE users SET enabled=?,updated_at=? WHERE id=?", (int(enabled), _now(), identifier))
             if not enabled:
@@ -214,6 +215,28 @@ class Store:
                     db.execute("UPDATE devices SET enabled=0,state='revoking',revision=? WHERE id=?", (revision, device["id"]))
                     self._queue(db, device["id"], revision)
             self._audit(db, "user.enable" if enabled else "user.disable", "user", identifier)
+
+    def set_device_enabled(self, identifier, enabled):
+        if type(enabled) is not bool:
+            raise ValidationError("Invalid enabled flag")
+        if not enabled:
+            return self.revoke_device(identifier)
+        with self.transaction() as db:
+            device = db.execute("SELECT * FROM devices WHERE id=?", (identifier,)).fetchone()
+            if device is None:
+                raise ValidationError("Device not found")
+            if device["enabled"]:
+                return
+            if device["origin"] == "legacy" and not db.execute("SELECT 1 FROM settings WHERE key='managed_legacy_adopted' AND value='1'").fetchone():
+                raise ValidationError("Legacy enable requires managed startup migration")
+            user = db.execute("SELECT * FROM users WHERE id=?", (device["user_id"],)).fetchone()
+            active = db.execute("SELECT count(*) FROM devices WHERE user_id=? AND enabled=1", (device["user_id"],)).fetchone()[0]
+            if not user["enabled"] or (user["device_limit"] is not None and active >= user["device_limit"]):
+                raise ValidationError("User disabled or device limit reached")
+            revision = device["revision"] + 1
+            db.execute("UPDATE devices SET enabled=1,state='pending',revision=? WHERE id=?", (revision, identifier))
+            self._queue(db, identifier, revision)
+            self._audit(db, "device.enable", "device", identifier)
 
     def import_legacy(self, state):
         validate_legacy_state(state)

@@ -55,8 +55,9 @@ def _atomic(path, data, mode=0o600):
 
 
 class NetworkAgent:
-    def __init__(self, baseline, *, config_dir, state_dir, runner=_run):
+    def __init__(self, baseline, *, config_dir, state_dir, runner=_run, offline=False):
         validate_legacy_state(baseline)
+        self.baseline = baseline
         self.interface = baseline_module().iface(baseline)
         self.subnet = ipaddress.ip_network(baseline["subnet"])
         self.config = Path(config_dir)
@@ -68,6 +69,7 @@ class NetworkAgent:
             raise ValidationError("Agent directory must be private")
         self.registry = self.directory / "managed.json"
         self.runner = runner
+        self.offline = offline
 
     def _registry(self):
         if not self.registry.exists():
@@ -82,7 +84,7 @@ class NetworkAgent:
     @staticmethod
     def _block(spec):
         return (f"\n# FTM device {spec['id']}\n[Peer]\nPublicKey = {spec['wg_public_key']}\n"
-                f"PresharedKey = {spec['preshared_key']}\nAllowedIPs = {spec['ip']}/32\n")
+                f"PresharedKey = {spec['preshared_key']}\nAllowedIPs = {', '.join(spec['allowed_ips'])}\n")
 
     def _set_peer(self, spec):
         fd, name = tempfile.mkstemp(prefix="psk-", dir=self.directory)
@@ -91,7 +93,7 @@ class NetworkAgent:
             with os.fdopen(fd, "w") as stream:
                 stream.write(spec["preshared_key"] + "\n")
             self.runner(["wg", "set", self.interface, "peer", spec["wg_public_key"],
-                         "preshared-key", name, "allowed-ips", spec["ip"] + "/32"])
+                         "preshared-key", name, "allowed-ips", ",".join(spec["allowed_ips"])])
         finally:
             os.unlink(name)
 
@@ -100,17 +102,41 @@ class NetworkAgent:
             if str(uuid.UUID(device["id"])) != device["id"]:
                 raise ValueError()
             ip = ipaddress.ip_address(device["ip"])
-            if ip.version != 4 or ip not in self.subnet or not 10 <= int(ip) - int(self.subnet.network_address) <= 254:
+            if ip.version != 4 or ip not in self.subnet:
                 raise ValueError()
             if not valid_key(device["wg_public_key"]) or not valid_key(device["preshared_key"]):
                 raise ValueError()
             if not isinstance(device["cid"], str) or not re.fullmatch(r"[0-9a-f]{32}", device["cid"]):
                 raise ValueError()
-            if device["origin"] != "manager" or device["vpn_type"] != "wg" or device["enabled"] not in (0, 1):
+            if device["vpn_type"] != "wg" or device["enabled"] not in (0, 1):
+                raise ValueError()
+            if device["origin"] == "legacy":
+                spec = self.legacy_spec(device)
+                owned = self._registry()["devices"].get(device["id"])
+                if not owned or not owned.get("legacy") or owned["spec"] != spec:
+                    raise ValueError()
+                return spec
+            if device["origin"] != "manager" or not 10 <= int(ip) - int(self.subnet.network_address) <= 254:
                 raise ValueError()
         except (ValueError, TypeError, KeyError):
             raise ValidationError("Invalid peer or protected legacy device") from None
-        return {key: device[key] for key in ("id", "wg_public_key", "preshared_key", "cid", "ip")}
+        return {**{key: device[key] for key in ("id", "wg_public_key", "preshared_key", "cid", "ip")},
+                "allowed_ips": [device["ip"] + "/32"]}
+
+    def legacy_spec(self, device):
+        app = baseline_module()
+        for name, last in [("iphone", 2), ("android", 3)]:
+            peer = self.baseline["clients"][name]
+            if device.get("wg_public_key") != peer["public_key"]:
+                continue
+            expected_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "ftm/legacy/" + self.baseline["instance"] + "/" + name))
+            if (device.get("id") != expected_id or device.get("origin") != "legacy" or
+                    device.get("cid") != peer["cid"] or device.get("preshared_key") != peer["preshared_key"] or
+                    device.get("ip") != app.address(self.baseline, last)):
+                raise ValidationError("Legacy identity differs from the trusted baseline")
+            return {**{key: device[key] for key in ("id", "wg_public_key", "preshared_key", "cid", "ip")},
+                    "allowed_ips": [device["ip"] + "/32", app.v6prefix(self.baseline) + str(last) + "/128"]}
+        raise ValidationError("Unknown legacy identity")
 
     def apply(self, device):
         spec = self._validate(device)
@@ -126,14 +152,29 @@ class NetworkAgent:
         old = registry["devices"].get(spec["id"])
         if old and old["spec"] != spec:
             raise Conflict("Managed peer identity changed")
-        peers = set(self.runner(["wg", "show", self.interface, "peers"]).split())
+        persisted = []
+        for section in original_wg.decode().split("[Peer]")[1:]:
+            fields = {}
+            for line in section.splitlines():
+                line = line.split("#", 1)[0]
+                if "=" in line:
+                    name, value = line.split("=", 1)
+                    fields[name.strip()] = value.strip()
+            persisted.append(fields)
+        if self.offline:
+            peers = {fields.get("PublicKey") for fields in persisted}
+            allowed_lines = [fields.get("PublicKey", "") + "\t" + fields.get("AllowedIPs", "") for fields in persisted]
+        else:
+            peers = set(self.runner(["wg", "show", self.interface, "peers"]).split())
+            allowed_lines = self.runner(["wg", "show", self.interface, "allowed-ips"]).splitlines()
         if spec["wg_public_key"] in peers and not old:
             raise Conflict("Refusing to adopt an unknown WireGuard peer")
         comment = {"comment": "FTM:" + spec["id"]}
         current_cid = clients["clients"].get(spec["cid"])
-        if current_cid is not None and (not old or current_cid != comment):
+        cid_owned = isinstance(current_cid, dict) and current_cid.get("comment") == comment["comment"]
+        if current_cid is not None and (not old or not cid_owned):
             raise Conflict("Refusing to replace an unknown Client ID")
-        for line in self.runner(["wg", "show", self.interface, "allowed-ips"]).splitlines():
+        for line in allowed_lines:
             fields = line.split()
             if len(fields) < 2 or fields[0] == spec["wg_public_key"]:
                 continue
@@ -159,36 +200,41 @@ class NetworkAgent:
                 if value and ipaddress.ip_address(spec["ip"]) in ipaddress.ip_network(value, strict=False):
                     raise Conflict("Address overlaps an unknown persisted peer")
         was_present = spec["wg_public_key"] in peers
-        if device["enabled"] and old and old.get("phase") == "active" and was_present and current_cid == comment and block in wg_text:
+        if device["enabled"] and old and old.get("phase") == "active" and was_present and cid_owned and block in wg_text:
             return False
-        registry["devices"][spec["id"]] = {"phase": "preparing", "spec": spec}
+        registry["devices"][spec["id"]] = {"phase": "preparing", "spec": spec,
+                                           "legacy": device["origin"] == "legacy", "enabled": bool(device["enabled"])}
         _atomic(self.registry, json.dumps(registry))
         try:
             if device["enabled"]:
                 if block not in wg_text:
                     wg_text += block
                 _atomic(wg_path, wg_text)
-                self._set_peer(spec)
-                clients["clients"][spec["cid"]] = comment
+                if not self.offline:
+                    self._set_peer(spec)
+                clients["clients"][spec["cid"]] = {**(current_cid or {}), **comment}
                 _atomic(clients_path, json.dumps(clients))
                 registry["devices"][spec["id"]]["phase"] = "active"
             else:
-                if current_cid == comment:
+                if cid_owned:
                     clients["clients"].pop(spec["cid"])
                 _atomic(clients_path, json.dumps(clients))
-                if was_present:
+                if was_present and not self.offline:
                     self.runner(["wg", "set", self.interface, "peer", spec["wg_public_key"], "remove"])
                 _atomic(wg_path, wg_text.replace(block, "", 1))
-                registry["devices"].pop(spec["id"], None)
+                if device["origin"] == "legacy":
+                    registry["devices"][spec["id"]]["phase"] = "revoked"
+                else:
+                    registry["devices"].pop(spec["id"], None)
             _atomic(self.registry, json.dumps(registry))
             return True
         except BaseException:
             _atomic(clients_path, original_clients)
             _atomic(wg_path, original_wg)
             try:
-                if was_present and old:
+                if was_present and old and not self.offline:
                     self._set_peer(old["spec"])
-                elif not was_present:
+                elif not was_present and not self.offline:
                     self.runner(["wg", "set", self.interface, "peer", spec["wg_public_key"], "remove"])
                 _atomic(self.registry, previous_registry)
             except RuntimeError:
