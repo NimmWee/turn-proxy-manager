@@ -46,9 +46,16 @@ def main(argv=None):
     inspect = commands.add_parser("inspect", help="Проверить state Vps без раскрытия ключей")
     inspect.add_argument("--state", type=Path, required=True)
     commands.add_parser("preflight", help="Прочитать ОС, ресурсы и занятые порты без изменения хоста")
+    security = commands.add_parser("secure-ssh", help="Настроить установленный Fail2ban: 3 ошибки → 365 дней")
+    security.add_argument("--apply", action="store_true", help="Явно применить защиту SSH (root/Linux)")
     args = parser.parse_args(argv)
     try:
-        if args.command == "preflight":
+        if args.command == "secure-ssh":
+            if not args.apply:
+                raise ValueError("Для настройки Fail2ban нужен явный --apply; пакеты должны быть установлены.")
+            from .ssh_protection import configure
+            report = configure()
+        elif args.command == "preflight":
             report = evaluate(collect())
             print(json.dumps(report, ensure_ascii=False, indent=2))
             return 0 if report["preflight_ready"] else 2
@@ -88,6 +95,9 @@ def main(argv=None):
     except OSError:
         print("Ошибка доступа к файлу. Проверьте путь, владельца и права. Содержимое скрыто.", file=sys.stderr)
         return 2
+    except RuntimeError:
+        print("Не удалось применить защиту SSH. Выполнен откат конфигурации; проверьте службу Fail2ban.", file=sys.stderr)
+        return 3
 
 
 if __name__ == "__main__":

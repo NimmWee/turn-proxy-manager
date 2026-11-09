@@ -27,6 +27,11 @@ class CliTests(unittest.TestCase):
         self.assertEqual(cli("--help").returncode, 0)
         self.assertNotEqual(cli("uninstall").returncode, 0)
 
+    def test_secure_ssh_requires_explicit_apply(self):
+        result = cli("secure-ssh")
+        self.assertEqual(result.returncode, 2)
+        self.assertNotIn("Traceback", result.stderr)
+
     def test_noninteractive_requires_config(self):
         result = cli("install", "--non-interactive", "--dry-run")
         self.assertNotEqual(result.returncode, 0)
