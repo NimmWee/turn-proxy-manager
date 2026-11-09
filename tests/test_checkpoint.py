@@ -42,6 +42,24 @@ class CheckpointSafetyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             stage(snapshot, Path(self.folder.name) / "trigger")
 
+    def test_web_settings_roundtrip_and_unknown_fields_rejected(self):
+        import json
+        from ftm.web_auth import make_config
+        adopt_legacy(self.store, self.agent)
+        config = Path(self.folder.name) / "web.json"
+        config.write_text(json.dumps(make_config("admin", "synthetic admin recovery phrase")))
+        config.chmod(0o600)
+        snapshot = capture(self.store, self.agent, web_config_path=config)
+        self.assertEqual(snapshot["version"], 2)
+        target = Path(self.folder.name) / "web-restore"
+        stage(snapshot, target)
+        self.assertEqual((target / "web.json").read_bytes(), config.read_bytes())
+        content = json.loads(config.read_text())
+        content["command"] = "unexpected"
+        snapshot["files"]["web.json"] = base64.b64encode(json.dumps(content).encode()).decode()
+        with self.assertRaises(ValueError):
+            stage(snapshot, Path(self.folder.name) / "bad-web-restore")
+
     @unittest.skipUnless(shutil.which("openssl"), "OpenSSL required")
     def test_wrong_password_and_modified_ciphertext_are_rejected(self):
         snapshot = self.snapshot()

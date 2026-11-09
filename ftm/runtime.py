@@ -9,7 +9,7 @@ import shutil
 import tempfile
 
 from .agent import _atomic, _run, NetworkAgent
-from .checkpoint import capture, open_checkpoint, _read_encrypted
+from .checkpoint import capture_live as capture, open_checkpoint, _read_encrypted
 from .installer import read_private_json
 from .store import Store, ValidationError
 
@@ -40,6 +40,10 @@ def install(checkpoint, offsite_sha256):
         raise ValidationError("Take a fresh checkpoint before changing the runtime")
     files = [p.relative_to(source) for p in (source / "ftm").glob("*.py")]
     files += [Path("ftm/migrations/001_initial.sql"), Path("scripts/verify_baseline.py"), Path("upstreams.lock.json")]
+    if (source / "requirements.lock").is_file():
+        files.append(Path("requirements.lock"))
+    if (source / "web/dist").is_dir():
+        files += [path.relative_to(source) for path in (source / "web/dist").rglob("*") if path.is_file()]
     lock = json.loads((source / "upstreams.lock.json").read_text())
     files += [Path("vendor/vps") / name for name in lock["baseline_files"]]
     manifest = {}

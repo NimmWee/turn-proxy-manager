@@ -1,6 +1,6 @@
 # Зашифрованная копия managed VPN
 
-Текущий формат объединяет root-owned SQLite (через SQLite Backup API), baseline state с ключами и выданными профилями, persistent WireGuard config, CID config и root ownership registry. Он предназначен для уже установленного managed VPN. Панель, Caddy, домен и сертификаты пока отсутствуют; после их появления состав копии потребуется расширить. Это ещё не финальный installer/restore всего проекта.
+Текущий формат объединяет root-owned SQLite (через SQLite Backup API), baseline state с ключами и выданными профилями, persistent WireGuard config, CID config и root ownership registry. **Версия 2** добавляет root web config: password hash, имя администратора и секретный путь панели. Сессии не сохраняются; после restore нужен новый login. Caddy, домен и сертификаты пока отсутствуют — при их появлении копию потребуется расширить. Это ещё не финальный installer/restore всего проекта.
 
 Команды после установки runtime:
 
@@ -14,7 +14,9 @@ Recovery phrase запрашивается скрытым вводом; она �
 
 ## Ограничения применения
 
-Сейчас `--apply` поддерживает **только тот же установленный хост с неизменным baseline state**: endpoint, ключи, subnet, порты и uplink должны совпасть. Он восстанавливает managed metadata/registry/WG/CID, синхронизирует существующий kernel WG и контролируемо перезапускает FreeTurn. SSH, firewall, network.json и сторонние службы не меняются. Сетевая служба должна быть уже установлена, interface должен существовать, а текущая metadata должна позволять создать согласованную rollback-копию.
+Сейчас `--apply` поддерживает **только тот же установленный хост с неизменным baseline state**: endpoint, ключи, subnet, порты и uplink должны совпасть. Он восстанавливает managed metadata/registry/WG/CID, obf key из baseline state, web config, синхронизирует существующий kernel WG и контролируемо перезапускает FreeTurn и ранее активный API. Для API проверяется HTTP readiness, credentials обновляются через systemd. SSH, firewall, network.json и сторонние службы не меняются. Сетевая служба должна быть уже установлена, interface должен существовать, а текущая metadata должна позволять создать согласованную rollback-копию.
+
+Старый v1 без web settings можно проверить/stage, но нельзя применить поверх уже provisioned web. Root login note не архивируется: копия сохраняет hash, не исходный пароль; после ручной смены credentials следует хранить действующий пароль отдельно. Root web config остаётся 0600, API получает только read-only systemd credential.
 
 Пустой/повреждённый хост, миграция на другой IP и восстановление сертификатов — будущая работа installer. Этот промежуточный режим не выдаётся за T19 на чистом VPS. До миграции или reboot требуется проверенная offsite-копия и доступное восстановление.
 

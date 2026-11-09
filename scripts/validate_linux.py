@@ -28,7 +28,7 @@ def main():
     ]
     with tempfile.TemporaryDirectory(prefix="ftm-verify-") as folder:
         root = Path(folder) / "project"
-        shutil.copytree(source, root, ignore=shutil.ignore_patterns(".git", ".references", "logs", "__pycache__"))
+        shutil.copytree(source, root, ignore=shutil.ignore_patterns(".git", ".references", "logs", "__pycache__", ".venv", "node_modules"))
         config = root / "examples/install.domain.json"
         config.chmod(0o600)
         checks.append(["bash", "install.sh", "--manager", "--non-interactive", "--config", str(config), "--dry-run"])

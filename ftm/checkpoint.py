@@ -27,6 +27,7 @@ MAGIC = b"FTMCP1\n"
 MAX_RAW = 12 * 1024 ** 2
 MAX_CIPHER = MAX_RAW + 4096
 FILES = {"state.json", "wireguard.conf", "clients.json", "managed.json"}
+WEB_CONFIG = Path("/etc/ftm/web.json")
 
 
 def _json(raw):
@@ -130,8 +131,9 @@ def _wg_peers(raw, state):
 
 def _decode(snapshot):
     if (not isinstance(snapshot, dict) or set(snapshot) != {"format", "version", "files", "database"}
-            or snapshot["format"] != "ftm-checkpoint" or type(snapshot["version"]) is not int or snapshot["version"] != 1
-            or not isinstance(snapshot["files"], dict) or set(snapshot["files"]) != FILES):
+            or snapshot["format"] != "ftm-checkpoint" or type(snapshot["version"]) is not int or snapshot["version"] not in (1, 2)
+            or not isinstance(snapshot["files"], dict)
+            or set(snapshot["files"]) != (FILES | {"web.json"} if snapshot["version"] == 2 else FILES)):
         raise ValidationError("Unsupported checkpoint format or file section")
     try:
         files = {name: base64.b64decode(value, validate=True) for name, value in snapshot["files"].items()}
@@ -146,6 +148,9 @@ def _decode(snapshot):
 def stage(snapshot, destination):
     files, database = _decode(snapshot)
     state = validate_legacy_state(_json(files["state.json"]))
+    if "web.json" in files:
+        from .web_auth import validate_config
+        validate_config(_json(files["web.json"]))
     if state["instance"] != "main":
         raise ValidationError("Only the managed main instance is supported")
     peers = _wg_peers(files["wireguard.conf"], state)
@@ -196,13 +201,13 @@ def stage(snapshot, destination):
                 "staged": True, "live_system_changed": False}
     except BaseException:
         # Only delete exact files we created in this new private directory.
-        for name in (*FILES, "metadata.sqlite3", "metadata.sqlite3-wal", "metadata.sqlite3-shm"):
+        for name in (*files, "metadata.sqlite3", "metadata.sqlite3-wal", "metadata.sqlite3-shm"):
             (destination / name).unlink(missing_ok=True)
         destination.rmdir()
         raise
 
 
-def capture(store, agent):
+def capture(store, agent, *, web_config_path=None):
     paths = {"wireguard.conf": agent.config / "wireguard.conf", "clients.json": agent.config / "clients.json", "managed.json": agent.registry}
     if any(path.is_symlink() or not path.is_file() or path.stat().st_size > 2 * 1024 ** 2 for path in paths.values()):
         raise ValidationError("Unsafe checkpoint source file")
@@ -213,11 +218,19 @@ def capture(store, agent):
         store.backup(database)
         files = {name: path.read_bytes() for name, path in paths.items()}
         files["state.json"] = json.dumps(agent.baseline).encode()
-        snapshot = {"format": "ftm-checkpoint", "version": 1,
+        if web_config_path is not None and Path(web_config_path).exists():
+            from .web_auth import validate_config
+            validate_config(read_private_json(web_config_path, 16384))
+            files["web.json"] = Path(web_config_path).read_bytes()
+        snapshot = {"format": "ftm-checkpoint", "version": 2 if "web.json" in files else 1,
                     "files": {name: base64.b64encode(raw).decode() for name, raw in files.items()},
                     "database": base64.b64encode(database.read_bytes()).decode()}
         stage(snapshot, Path(temporary) / "check")
         return snapshot
+
+
+def capture_live(store, agent):
+    return capture(store, agent, web_config_path=WEB_CONFIG)
 
 
 def _restore_database(source, destination):
@@ -238,32 +251,61 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
     restored_state = read_private_json(staged / "state.json", 2 * 1024 ** 2)
     if restored_state != agent.baseline:
         raise ValidationError("Same-host restore must preserve the complete baseline identity")
+    includes_web = (staged / "web.json").is_file()
+    if includes_web != WEB_CONFIG.is_file():
+        raise ValidationError("Same-host restore must include the currently provisioned web settings")
     # Revalidate even when called independently of the CLI.
     with tempfile.TemporaryDirectory(prefix="ftm-restore-") as temporary:
         root = Path(temporary)
-        candidate = {"format": "ftm-checkpoint", "version": 1,
-                     "files": {name: base64.b64encode((staged / name).read_bytes()).decode() for name in FILES},
+        names = FILES | {"web.json"} if includes_web else FILES
+        candidate = {"format": "ftm-checkpoint", "version": 2 if includes_web else 1,
+                     "files": {name: base64.b64encode((staged / name).read_bytes()).decode() for name in names},
                      "database": base64.b64encode((staged / "metadata.sqlite3").read_bytes()).decode()}
         stage(candidate, root / "validated")
-        previous = capture(store, agent)
+        previous = capture_live(store, agent)
         stage(previous, root / "rollback")
+        api_was_active = False
+        if includes_web:
+            try:
+                api_was_active = runner(["systemctl", "is-active", "ftm-api"]).strip() == "active"
+            except RuntimeError:
+                pass
 
         def write(source):
             _atomic(agent.config / "wireguard.conf", (source / "wireguard.conf").read_bytes())
             _atomic(agent.config / "clients.json", (source / "clients.json").read_bytes())
+            _atomic(agent.config / "obf.key", agent.baseline["obf_key"] + "\n", mode=0o640)
             _atomic(agent.registry, (source / "managed.json").read_bytes())
+            if includes_web:
+                _atomic(WEB_CONFIG, (source / "web.json").read_bytes())
             _restore_database(source / "metadata.sqlite3", store.path)
             runner(["wg", "syncconf", agent.interface, str(agent.config / "wireguard.conf")])
-
-        runner(["systemctl", "stop", "vps-vk"])
 
         def start_vpn():
             # Explicit maintenance can legitimately exceed the unchanged
             # four-starts/five-minutes crash-loop limit.
             runner(["systemctl", "reset-failed", "vps-vk"])
             runner(["systemctl", "start", "vps-vk"])
+            if api_was_active:
+                runner(["systemctl", "reset-failed", "ftm-api"])
+                runner(["systemctl", "start", "ftm-api"])
+                import time
+                import urllib.request
+                for attempt in range(20):
+                    try:
+                        with urllib.request.urlopen("http://127.0.0.1:8080/", timeout=2) as response:
+                            if response.status != 200:
+                                raise RuntimeError("API recovery health check failed")
+                        break
+                    except (OSError, RuntimeError):
+                        if attempt == 19:
+                            raise RuntimeError("API recovery health check failed") from None
+                        time.sleep(0.2)
 
         try:
+            if api_was_active:
+                runner(["systemctl", "stop", "ftm-api"])
+            runner(["systemctl", "stop", "vps-vk"])
             write(root / "validated")
             if after_write:
                 after_write()
@@ -278,7 +320,8 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
             except BaseException:
                 raise RuntimeError("Restore failed and recovery needs root attention") from None
             raise RuntimeError("Restore failed; previous checkpoint recovered") from None
-    return {"restored": True, "same_host_only": True, "ssh_and_firewall_changed": False}
+    return {"restored": True, "same_host_only": True, "ssh_and_firewall_changed": False,
+            "web_settings_restored": includes_web, "api_sessions_reset": api_was_active}
 
 
 def _read_encrypted(path):
@@ -315,7 +358,7 @@ def main(argv=None):
                 parser.error("backup writes only an encrypted file; no apply/dry-run flags")
             if password != getpass.getpass("Repeat recovery phrase: "):
                 raise ValidationError("Recovery phrases differ")
-            data = seal(capture(store, agent), password)
+            data = seal(capture_live(store, agent), password)
             output_fd = os.open(args.file, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
             with os.fdopen(output_fd, "wb") as stream:
                 stream.write(data)

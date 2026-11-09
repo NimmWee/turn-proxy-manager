@@ -4,7 +4,10 @@
 
 ## Текущий этап
 
-**Managed startup и recovery проверены на тестовом VPS.** Установлены root-owned `/opt/ftm` runtime, совместимый `vps-vk` и systemd startup hook. Общий encrypted checkpoint скачан и реально проверен в WSL; same-host restore и injected rollback PASS. Pending revoke/enable пережили настоящий restart сети. После фактического reboot VPN стартовал автоматически; ключи, профили, registry и metadata совпали. SSH, годовой Fail2ban и scoped firewall проверены. Phone E2E после reboot NOT RUN. Следующий блок — ограниченный Unix IPC без передачи SQLite пользователю API. Подробнее: [CHECKPOINT.md](CHECKPOINT.md), [IPC_PLAN.md](IPC_PLAN.md).
+**Private API и русская панель уже проверены на тестовом VPS.** Rootless FastAPI через ограниченный Unix IPC, действующий login/CSRF/logout, users/devices и настоящие метрики. UI проверен desktop/mobile/light/dark через SSH forwarding к серверу. После synthetic CRUD ключи/config/profile и VPN/SSH PID совпали. Checkpoint v2 включает web settings, offsite decode и реальные restore/rollback с изменением web identity PASS. Публичный Caddy/TLS, выдача новых клиентских профилей, подписки и full installer ещё не готовы. [Результат](STAGE3_PROGRESS.md).
+
+
+**Managed startup и recovery проверены на тестовом VPS.** Установлены root-owned `/opt/ftm` runtime, совместимый `vps-vk` и systemd startup hook. Общий encrypted checkpoint скачан и реально проверен в WSL; same-host restore и injected rollback PASS. Pending revoke/enable пережили настоящий restart сети. После фактического reboot VPN стартовал автоматически; ключи, профили, registry и metadata совпали. SSH, годовой Fail2ban и scoped firewall проверены. Phone E2E после reboot NOT RUN. IPC и первая private панель уже выполнены; далее trusted TLS и этап 4. Подробнее: [CHECKPOINT.md](CHECKPOINT.md), [IPC_PLAN.md](IPC_PLAN.md).
 
 По поручению пользователя включены почасовые запуски разработки в этом чате до **10.11.2026 08:20 Asia/Tomsk**. Очередь и точное состояние передачи: [NIGHT_WORK.md](NIGHT_WORK.md). Это не обещание завершения всего ТЗ за ночное окно.
 
