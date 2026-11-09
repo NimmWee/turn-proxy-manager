@@ -2,7 +2,11 @@
 
 Дата: 10.11.2026, Asia/Tomsk. Работа выполняется без субагентов. Это работающий фундамент этапа 2; полная приёмка этапа ещё открыта.
 
-## Обновление managed migration
+## Последний результат: startup/recovery
+
+Установлены root-owned runtime и совместимые системные команды. Общий encrypted checkpoint, offsite decode/stage, live same-host restore и отказ с rollback PASS. Проверены pending revoke/enable через реальный network restart и выдача только активных профилей. Выполнен настоящий reboot: auto-start VPN PASS, hashes конфигов/ключей/профилей и metadata совпали; SSH, Fail2ban и scoped firewall здоровы. Это не clean-host restore и не phone E2E после reboot. Следующий блок — ограниченный IPC; SQLite остаётся root-owned. [Детали checkpoint](CHECKPOINT.md), [план IPC](IPC_PLAN.md).
+
+## История managed migration
 
 На тестовом VPS выполнен `scripts/verify_managed.py --test-vps-apply`: root adoption двух исходных устройств с проверкой live public key/PSK/IP/IPv6 и persistent config. Теги ownership добавлены без изменения ключей, CID и выданного iPhone-профиля. Повтор adoption идемпотентен. Metadata-флаг без соответствующего root registry не разрешает legacy-операцию.
 
@@ -76,11 +80,11 @@ Metadata-команда сама сеть не меняет. Agent CLI треб�
 
 ## Оставшиеся gates и следующий шаг
 
-1. **Managed startup deployment.** Явный root adoption и legacy revoke/enable уже проверены. Подготовка persistent state проверена изолированно; нужно установить root runtime/startup hook и проверить восстановление/загрузку хоста. Исходные приватные профили остаются в baseline state; это архив ключей, а не разрешение доступа.
-2. Совместимый dynamic status/profiles реализован и проверен как `python3 -m ftm.compat`. Системный legacy `vps-vk` пока не заменён: он ожидает два peers, а его install/restore нельзя запускать поверх adopted state. Нужна установка wrapper после общего checkpoint.
+1. Managed startup, совместимый system CLI и host reboot уже PASS. Остаётся clean-host restore в будущем installer; исходные private profiles в baseline state являются архивом ключей, а не разрешением доступа.
+2. Системный `vps-vk` заменён совместимым wrapper; status/profiles и запрет legacy mutation проверены. Новые возможности не должны обходить root ownership.
 3. Нет постоянного agent service/Unix IPC, автоматического reconciler timer и web RBAC. Сейчас apply — отдельная root-only команда. Разделение прав DB/API/agent и защита IPC необходимы до FastAPI.
 4. CID файл обновлён атомарно, исходник подтверждает polling 10 с. **Live авторизация нового CID через настоящий FreeTurn-клиент не проверена.** Три одновременных реальных устройства также не проверены.
 5. Адреса отозванных устройств пока сохраняются в истории и не выдаются повторно. Пул новых устройств `.10–.254`; reuse потребует подтверждённой очистки actual state.
-6. Требуется автоматизированный общий encrypted backup/restore metadata + registry + VPN и полный reboot. Raw SQLite checkpoint отдельно не восстанавливает всю систему.
+6. Общий encrypted checkpoint текущего managed VPN и same-host restore/rollback/reboot PASS. Копию потребуется расширить настройками API/Caddy/доменов при их появлении; clean-host restore пока NOT RUN.
 
-Сначала закрыть managed startup/legacy adapter и полный checkpoint, затем перейти к FastAPI и русской панели. Этап 2 целиком завершённым не объявляется.
+Следующий шаг — безопасный IPC для rootless API, затем FastAPI и русская панель. Этап 2 целиком завершённым не объявляется.

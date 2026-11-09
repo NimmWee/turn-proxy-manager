@@ -1,4 +1,4 @@
-"""Local read-only CLI. Error output deliberately excludes file contents."""
+"""Local administration CLI. General installation remains dry-run only."""
 
 import argparse
 import json
@@ -46,10 +46,19 @@ def main(argv=None):
     inspect = commands.add_parser("inspect", help="Проверить state Vps без раскрытия ключей")
     inspect.add_argument("--state", type=Path, required=True)
     commands.add_parser("preflight", help="Прочитать ОС, ресурсы и занятые порты без изменения хоста")
-    security = commands.add_parser("secure-ssh", help="Настроить установленный Fail2ban: 3 ошибки → 365 дней")
+    security = commands.add_parser("secure-ssh", help="Настроить Fail2ban: бан на 365 дней после 3 ошибок")
     security.add_argument("--apply", action="store_true", help="Явно применить защиту SSH (root/Linux)")
+    for command in ("backup", "restore"):
+        checkpoint = commands.add_parser(command, help="Зашифрованная копия managed VPN; restore по умолчанию только проверяет")
+        checkpoint.add_argument("file", type=Path)
+        checkpoint.add_argument("--dry-run", action="store_true")
+        checkpoint.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.command in ("backup", "restore"):
+            from .checkpoint import safe_main
+            flags = (["--dry-run"] if args.dry_run else []) + (["--apply"] if args.apply else [])
+            return safe_main([args.command, str(args.file), *flags])
         if args.command == "secure-ssh":
             if not args.apply:
                 raise ValueError("Для настройки Fail2ban нужен явный --apply; пакеты должны быть установлены.")

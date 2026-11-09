@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sqlite3
 import sys
@@ -38,7 +39,12 @@ def main(argv=None):
     devices.add_parser("revoke").add_argument("device_id")
     devices.add_parser("enable").add_argument("device_id")
     args = parser.parse_args(argv)
+    lifecycle_fd = None
     try:
+        if os.name == "posix" and args.db.absolute() == Path("/var/lib/ftm/manager.sqlite3"):
+            import fcntl
+            lifecycle_fd = os.open("/run/lock/vps-vk.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+            fcntl.flock(lifecycle_fd, fcntl.LOCK_EX)
         store = Store(args.db)
         if args.command != "init" and not args.db.is_file():
             raise ValidationError("Database is not initialized")
@@ -78,6 +84,9 @@ def main(argv=None):
     except (ValueError, OSError, sqlite3.Error):
         print("Metadata operation rejected or failed; private data withheld", file=sys.stderr)
         return 2
+    finally:
+        if lifecycle_fd is not None:
+            os.close(lifecycle_fd)
 
 
 if __name__ == "__main__":

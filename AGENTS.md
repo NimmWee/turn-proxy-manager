@@ -1,6 +1,7 @@
 # Работа над FreeTurn Manager
 
 - Работать без субагентов: явное указание пользователя от 10.11.2026.
+- Подход к проверкам для всего проекта: пользователь не требует полного автотестового покрытия. Автотесты — для существенных рисков (ключи/доступ/данные/права); обычные изменения проверять сборкой и рабочим сценарием. Не писать тест на каждую функцию или обратимое изменение.
 - Основные требования: `docs/FreeTurn_Manager_TZ.md` и `docs/IMPLEMENTATION_PLAN.md`.
 - Различать реализованный код, локальные тесты, mock и реальные E2E. Состояние — в `docs/PROGRESS.md`.
 - `vendor/vps/` — неизменяемый baseline NimmWee/Vps. Не форматировать, не переписывать и не обновлять его автоматически. Контроль — `upstreams.lock.json` и `scripts/verify_baseline.py`.
@@ -10,6 +11,7 @@
 - Пользователь разрешил развернуть исходный VPN на отдельном тестовом VPS и выдать приватный профиль iPhone для Anton48. Использовать `python -m ftm.baseline_deploy --apply` с годовым Fail2ban hook, не изменяя `vendor/vps/`. VK URL хранить только на сервере 0600; импорт/QR выдавать вне Git. Общий install/apply Manager пока не готов.
 - Пользователь подтвердил iPhone E2E и разрешил recovery/rollback и начало этапа 2 на тестовом VPS. Разрешены SQLite metadata import и синтетические hot add/revoke проверки через фиксированный root-only agent; рабочий VPS не затрагивать. Legacy revoke/disable разрешён только после проверенного explicit root adoption; на тестовом VPS adoption и revoke/enable неактивного Android peer уже проверены. Startup hook ещё не установлен; текущая передача — docs/NIGHT_WORK.md. Пакетный baseline reinstall/recovery не запускать при активных manager peers: старый renderer перезапишет их конфигурацию.
 - Не выводить private keys, PSK, CID, VK link, obf key и токены в диагностику, исключения или Git.
+- По ночному поручению на согласованном тестовом VPS разрешены managed runtime/startup hook, общий encrypted checkpoint и same-host restore/rollback. Offsite decode/stage и recovery проверены; фактический reboot PASS. Следующий IPC/API сохраняет root ownership SQLite; API не должен писать в эту БД напрямую. Границы и состояние — docs/CHECKPOINT.md и docs/NIGHT_WORK.md.
 - Не подключаться к реальному VPS и не развёртывать туда проект без согласованного доступа. Не отправлять изменения на GitHub без поручения пользователя.
 
 Проверки:
