@@ -1,0 +1,30 @@
+# Local diagnostics
+/logs/
+*.log
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.vpnbackup
+*.vkbackup
+
+# Runtime databases
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Build and editor files
+__pycache__/
+.venv/
+node_modules/
+.idea/
+.vscode/
+
+# Read-only upstream audit checkouts
+/.references/

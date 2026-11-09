@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "audited_on": "2026-11-10",
+  "repositories": [
+    {
+      "name": "vps",
+      "url": "https://github.com/NimmWee/Vps.git",
+      "commit": "25172a54f57afd29478051fbde9a4060c443d974",
+      "license": "MIT"
+    },
+    {
+      "name": "core",
+      "url": "https://github.com/hackdiaz-dev/free-turn-proxy.git",
+      "commit": "21dca376ca26d2b6d0e2d84d107b9314b5041146",
+      "license": "Happy Bunny License"
+    },
+    {
+      "name": "android",
+      "url": "https://github.com/hackdiaz-dev/turn-proxy-android.git",
+      "commit": "be516f1122ac38523203dbffde8603a8b3e755fc",
+      "license": "GPL-3.0"
+    },
+    {
+      "name": "desktop",
+      "url": "https://github.com/l1ch666/turn-proxy-android.git",
+      "commit": "386f85f222704fdbcff79121b8e9c606ebc1be24",
+      "license": "GPL-3.0"
+    },
+    {
+      "name": "ios",
+      "url": "https://github.com/anton48/vk-turn-proxy-ios.git",
+      "commit": "a41bd5628a8bdbdc6ff7e3d794fb76d97ea08871",
+      "license": "GPL-3.0"
+    },
+    {
+      "name": "kit",
+      "url": "https://github.com/itsnotkubrick/3X-UI_KIT.git",
+      "commit": "7b10e1d9f227d313fbb912069bbcda0b961ff9a9",
+      "license": "MIT"
+    }
+  ],
+  "baseline_files": {
+    ".gitattributes": "888f96f490c6c54088e8b0da4d4cdf1c52a92f887fde29f5f057c76224b22ed4",
+    ".github/workflows/test.yml": "5664b898fea1128e650ee4f7a68970864322637a0dd36fb0aa5096bc4692a77d",
+    ".gitignore": "9e16e9fbe035dee7bb5349f797f24c813edb04de7128672014e5492dc71f2a2d",
+    "artifacts/freeturn-linux-amd64": "9e6ccfde48ac0dc3ffdb398ef19f2203521febd3eeecfc6ae36a441226601a0c",
+    "artifacts/freeturn-linux-arm64": "0862013f4fcc9214acde948b6913fe434dfcd9ed7359a506681594852be1c1f5",
+    "artifacts/manifest.json": "36cd7eadbec160e0f78cdf6a7023304092943d272590f3283f4c7d7e4b25f4f4",
+    "dist/vps-vk-v1.0.0.tar.gz": "30ea1801f9c98e11d41e1408796fe2bf0dd803debc10882c19815c7e9ab2d063",
+    "docs/design.md": "d3d40fd771673f46c1fe2191b5423821598ab3a36d335b23bd8c4ba570534fa2",
+    "docs/plan.md": "8991d572ea57a85d9928632a8a7bc0a909b0d6c10cdd0625a22894648ba39513",
+    "docs/verification.md": "54cdd0dfc8803965e877ea91e840755fa5ea4fbf6d7e8f775fc467d35668de1f",
+    "install.sh": "aa3a173bd9d9f46ac6c9112e8315c6ce57b2014fdc9566e607a0f931e0bf6eaf",
+    "LICENSE": "524e62b5c00dad5bf9ac50713e1bd7edfc8df21915ca0879ef6eeadbcccb83df",
+    "NOTICE.md": "03c269f7282ce29e70ab6011e0a8e247b162ef4f18095fe904bbdd58fe8cb6a8",
+    "README.md": "6410ac0ee7df67367672e53a2c9a7c7bf89e75413892b619cc72965ca2dc61f2",
+    "scripts/build-freeturn.sh": "d6cc23cd59550e1c782b50f6164c9e43363016faeeb5c5d0ad9a861b009ef218",
+    "scripts/package.py": "7ab37f8bf53d5018e9231c408a76478a6efdcf33f295510eeeb318325edca080",
+    "scripts/verify-package.py": "8588b9cdcb6e40c894b8e3c460856f867dd926d6221ea78950a6a57b824307fc",
+    "src/vps_vk.py": "7c2b9e232a08b228ec79fcef06ed656781c650dedaf6e6076d75973be996a75a",
+    "tests/test_core.py": "76da9b7296acedc39b9723d93d31dcf46fc933300a7df2ce154a0b67112fdd21",
+    "third_party/freeturn-go-mod": "5ca0201bcd2d2d2f7ded43b8598cb3f23218164d7473e167cbc5026b26a8774c",
+    "third_party/freeturn-go-sum": "9668747fc9d748daf7488a2db09c3e71b77340415221359e2dafe2d77d3f5997",
+    "third_party/freeturn-keyfile.patch": "e45dde23eb3592a14c8830834d4446bc8e8c95736b7a9c0ba9c4a9834bb0fc8a",
+    "third_party/freeturn-LICENSE": "7d4cada12bead930dc24522b92293089ce240441db6c7d7bb44f5a78d7b24fdc"
+  },
+  "runtime_manifest": "vendor/vps/artifacts/manifest.json",
+  "python_dependencies": []
+}

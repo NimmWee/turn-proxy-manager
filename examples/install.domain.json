@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "mode": "fresh",
+  "web_mode": "domain",
+  "web_host": "vpn.example.org",
+  "panel_access": "public",
+  "tls_mode": "domain"
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "mode": "fresh",
+  "web_mode": "ip",
+  "web_host": "93.184.216.34",
+  "panel_access": "private",
+  "tls_mode": "private"
+}
