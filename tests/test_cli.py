@@ -40,10 +40,15 @@ class CliTests(unittest.TestCase):
     def test_config_dry_run_and_apply_refusal(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "config.json"
-            path.write_text(json.dumps(config()), encoding="utf-8")
+            # Use an explicit synthetic state: this test also runs on an installed test VPS.
+            state_path = Path(folder) / "state.json"
+            state_path.write_text(json.dumps(legacy_state()), encoding="utf-8")
+            state_path.chmod(0o600)
+            path.write_text(json.dumps(config(mode="migrate")), encoding="utf-8")
             path.chmod(0o600)
             original = path.read_bytes()
-            result = cli("install", "--manager", "--non-interactive", "--config", str(path), "--dry-run")
+            result = cli("install", "--manager", "--non-interactive", "--config", str(path),
+                         "--state", str(state_path), "--dry-run")
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(json.loads(result.stdout)["changes_system"])
             self.assertEqual(path.read_bytes(), original)

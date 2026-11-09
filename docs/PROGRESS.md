@@ -4,7 +4,7 @@
 
 ## Текущий этап
 
-**Этап 1 — локальная реализация и unit/smoke на отдельном тестовом VPS подтверждены; VPN E2E ещё открыт.** Пользователь предоставил новый тестовый VPS. На нём установлена и проверена годовая SSH-политика Fail2ban. К реализации этапов 2–8 пока не переходили. Следующий шаг — безопасное развёртывание исходного VPN с учётом новой SSH-политики и проверка реальных Android/iPhone.
+**Этап 1 — базовый VPN установлен на отдельном VPS, повторная установка и выдача iPhone-профиля проверены; ручной VPN E2E ожидается.** Пользователь разрешил установку, передал VK link и проверит Anton48 на iPhone. Android из исходного репозитория работал у него ранее, но текущая установка на Android отдельно не проверена. К реализации этапов 2–8 пока не переходили.
 
 ## Что реализовано
 
@@ -20,6 +20,7 @@
 | `tests/`, `.github/workflows/verify.yml` | Unit/CLI/PTY/файловые проверки; workflow подготовлен, но на GitHub ещё не запускался |
 | `docs/BASELINE.md`, `docs/DECISIONS.md`, `docs/IMPLEMENTATION_PLAN.md` | Проверенные контракты, ограничения, решения, требования миграции и последовательный план |
 | `ftm/ssh_protection.py`, `scripts/verify_ssh_protection.py` | Применение годовой защиты SSH с бэкапом/откатом; реальная проверка фильтра, порога, nftables и persistence на тестовом VPS |
+| `ftm/baseline_deploy.py`, `tests/test_baseline_deploy.py` | Явный запуск исходного Vps на согласованном тестовом VPS с заменой только hook годового Fail2ban; baseline не меняется |
 
 ## Проверки
 
@@ -28,10 +29,12 @@
 | Проверка | Результат |
 | --- | --- |
 | Исходные тесты Vps, Ubuntu WSL / Python 3.12.3 | **PASS: 8/8**, без пропусков |
-| Тесты Manager, Ubuntu WSL / Python 3.12.3 | **PASS: 38/38**, без пропусков |
-| Тесты Manager, Windows / Python 3.10.11 | **PASS: 34**, 4 платформенных пропуска (права POSIX, PTY, Linux inventory и Linux binary smoke); все четыре прошли в Linux |
-| Тесты на отдельном VPS 1 vCPU/961 MiB | **PASS: 38/38 Manager + 8/8 Vps**, binary smoke и SHA256 проверки |
+| Тесты Manager, Ubuntu WSL / Python 3.12.3 | **PASS: 41/41**, без пропусков |
+| Тесты Manager, Windows / Python 3.10.11 | **PASS: 37**, 4 платформенных пропуска; всего 41 тест |
+| Тесты на отдельном VPS 1 vCPU/961 MiB | **PASS: 41/41 Manager + 8/8 Vps**; binary smoke и SHA256 проверки |
 | Годовая политика Fail2ban на VPS | **PASS**, filter/threshold/nftables/SQLite/restart, test ban удалён, fresh SSH успешен |
+| Первая и повторная установка базового VPN | **PASS**, все ключи/CID/параметры сохранены при повторе; 3 службы active, 2 peers |
+| Зашифрованный бэкап вне VPS | **PASS**, ciphertext и recovery file сохранены вне Git; decrypt/parse проверен на VPS и локально, ключ соответствует выданному iPhone-профилю |
 | SHA256 baseline + исходный package verifier | **PASS**, все 23 файла, бинарники amd64/arm64 и архив |
 | Bash syntax | **PASS** |
 | Реальный Linux amd64 binary smoke | **PASS**, help/CID/startup/shutdown; не VPN-трафик |
@@ -44,7 +47,7 @@
 wsl -d Ubuntu-24.04 -- python3 /mnt/c/project/FTM/scripts/validate_linux.py
 ```
 
-Основной unit/CLI/binary прогон не запускает исходный установщик Vps и не меняет системные службы или firewall. Отдельная явно разрешённая операция `secure-ssh --apply` на тестовом VPS меняет только Fail2ban. Её интеграционная проверка создаёт и удаляет synthetic ban и перезапускает Fail2ban; SSH и WireGuard не перезапускаются.
+Основной unit/CLI/binary прогон не запускает исходный установщик Vps и не меняет системные службы или firewall. Отдельная явно разрешённая операция `secure-ssh --apply` меняет только Fail2ban. Дополнительно пользователь разрешил реальную установку базового VPN через `ftm.baseline_deploy`: добавлены его службы, интерфейс и scoped firewall rules. Это отдельная операция, общий install/apply Manager остаётся недоступным.
 
 ### Что подтверждено локально
 
@@ -63,30 +66,30 @@ Windows Python 3.10.11; Ubuntu 24.04 WSL Python 3.12.3, kernel `6.18.33.2-micros
 
 Read-only preflight на WSL корректно возвращает код 2: пользователь не root, `wg` и `iptables` отсутствуют. Ничего не доустанавливалось. Полные файловые тесты идут на Linux storage, а не на NTFS, где режим 0600 может не применяться.
 
-Дополнительная среда: отдельный VPS Ubuntu 24.04.4 LTS amd64, **1 vCPU / 961 MiB RAM**, диск около 58 GiB, SSH 22. Установлены Fail2ban 1.0.2, python3-systemd и nftables. В этой среде прошли unit/CLI/binary проверки; это ещё не ресурсный benchmark настоящего VPN. Подробности защиты — в [отчёте SSH](SSH_PROTECTION.md).
+Дополнительная среда: отдельный VPS Ubuntu 24.04.4 LTS amd64, **1 vCPU / 961 MiB RAM**, диск около 58 GiB, SSH 22. Установлены Fail2ban 1.0.2, python3-systemd, nftables, iptables, WireGuard tools, qrencode и FreeTurn 4.1.2-vps1. Прошли unit/CLI/binary проверки и повторная установка. Нагрузочный benchmark VPN ещё не выполнен. Подробности — в [отчёте SSH](SSH_PROTECTION.md) и [проверке iPhone](IPHONE_TEST.md).
 
 ## Не выполнено / не подтверждено
 
 | Проверка | Статус и причина |
 | --- | --- |
-| Свежая установка/повторная установка исходного Vps на Ubuntu 24.04 1 vCPU/1 GiB | NOT RUN — отдельный тестовый VPS теперь доступен; перед запуском нужно заменить старый hook Fail2ban, ожидающий 30 дней, и подготовить VPN-параметры |
-| Настоящие `vps-vk status`, `vps-vk profiles`, миграция существующей установки | NOT RUN — исходный VPN пока не развёрнут на тестовом VPS; рабочий VPS не затрагивался |
-| Android 5.3.2 ↔ сервер 4.1.2-vps1; Anton48 через VK TURN | NOT RUN — нет реальных устройств/операторской сети/CAPTCHA в тестовой среде |
+| Свежая установка/повторная установка исходного Vps на Ubuntu 24.04 1 vCPU/1 GiB | PASS с отдельным годовым Fail2ban hook; без заимствования полного Manager installer |
+| Настоящие `vps-vk status`, генерация profiles/QR | PASS — службы active, два peers, private artifacts 0600; миграция старого рабочего VPS NOT RUN |
+| Android ↔ сервер 4.1.2-vps1; Anton48 через VK TURN | iPhone — профиль выдан, ожидается результат пользователя; Android NOT RUN для этой установки, прежний успех со слов пользователя не заменяет новый тест |
 | Активный CID hot reload и отзыв уже открытой сессии | SOURCE ONLY — polling 10 с подтверждён в pinned source; поведение трафика не проверено |
 | WireGuard data plane, Direct/Relay E2E, DNS/IPv6 leaks | NOT RUN — binary smoke не передаёт пользовательский VPN-трафик |
-| Бэкап вне VPS и восстановление на чистом VPS | NOT RUN — локальная криптография проверена, production recovery нет |
+| Бэкап вне VPS и восстановление на чистом VPS | Частично PASS: offsite ciphertext, decrypt/parse и совпадение реальных ключей подтверждены. Чистое системное восстановление NOT RUN |
 | Полная Android/Windows сборка, arm64 execution, Go rebuild | NOT RUN; Desktop checkout больших binary blobs не завершился из-за сети, текстовые исходники изучены отдельно |
 | Trusted TLS/domain/IP, Caddy, API/React, подписки, автофейловер, Windows driver/service | NOT IMPLEMENTED — последующие этапы |
 | GitHub CI и публикация | NOT RUN — изменения локальные, push не выполнялся |
 
 ## Совместимость и откат
 
-Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не применяют системные изменения. В binary smoke используется только временная CID-база и ephemeral loopback listener, процесс завершается в finally. Новый `secure-ssh --apply` — отдельно разрешённое изменение Fail2ban: не заменяет VPN-ключи, не перезапускает VPN/SSH, создаёт только scoped Fail2ban rules.
+Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не применяют системные изменения. В binary smoke используется только временная CID-база и ephemeral loopback listener. `secure-ssh --apply` — отдельно разрешённое изменение Fail2ban. `ftm.baseline_deploy --apply` разрешён пользователем только для тестового VPS: первая установка создаёт ключи, повторная сохраняет их. SSH не перезапускался, MainPID 712 и NRestarts 0 сохранены, свежий SSH-вход после развёртывания успешен.
 
 Для Fail2ban предусмотрен бэкап прежних файлов в root-only каталоге и откат при неудачной проверке. Во время проверки откат реально сработал, после чего исправленный модуль успешно применён. Системный rollback VPN и импорт в SQLite пока не реализованы. Для отката локальной разработки используется история Git; исходный Vps остаётся в `vendor/vps/`.
 
 ## Следующий конкретный шаг
 
-На отдельном тестовом VPS зафиксировать исходное состояние/службы/правила, сохранить зашифрованную резервную копию вне VPS, проверить восстановление. Выполнить исходный install/reinstall, `status` и `profiles`; подтвердить трафик Android и Anton48 через VK, а также SSH после проверки. Зафиксировать SHA клиента и сценарий CAPTCHA. После этого закрыть gate этапа 1 и реализовать этап 2: SQLite users/devices и минимальный привилегированный agent.
+Получить результат ручной проверки Anton48 на iPhone: импорт, VK TURN, HTTPS и внешний IP; на VPS проверить свежий handshake и rx/tx. Затем проверить системный restore/rollback, не выдавая decrypt round-trip за восстановление хоста. Android сохранить в списке неподтверждённых сценариев, пока его отдельно не проверят. [Инструкция и границы проверки](IPHONE_TEST.md).
 
 Рабочий VPS по-прежнему не используется как тестовая среда. Новый тестовый VPS предоставлен пользователем отдельно; доступ и изменение его Fail2ban разрешены текущим поручением.
