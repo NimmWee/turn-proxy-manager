@@ -1,6 +1,7 @@
 """Explicit test-VPS baseline deployment; the full Manager installer stays unavailable."""
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -9,15 +10,36 @@ from .ssh_protection import configure
 from scripts.verify_baseline import verify_baseline
 
 
+def check_baseline_only(registry_path=Path("/var/lib/ftm-agent/managed.json")):
+    registry_path = Path(registry_path)
+    if registry_path.is_symlink():
+        raise ValueError("Unsafe agent registry")
+    if registry_path.exists():
+        if registry_path.stat().st_size > 2 * 1024 ** 2:
+            raise ValueError("Unsafe agent registry")
+        registry = json.loads(registry_path.read_text())
+        if not isinstance(registry, dict) or not isinstance(registry.get("devices"), dict):
+            raise ValueError("Unsafe agent registry")
+        if registry["devices"]:
+            raise ValueError("Baseline reinstall would overwrite managed peers; use a managed migration")
+
+
 def run_baseline_install(vk_link_file, endpoint, *, qr=False):
     app = baseline_module()
     endpoint = app.validate_endpoint(endpoint)
+    check_baseline_only()
     root = Path(__file__).resolve().parents[1]
     verify_baseline(root)
     original_policy, original_argv = app.configure_fail2ban, sys.argv
+    original_install = app.install
+    def guarded_install(*args, **kwargs):
+        # legacy main has acquired vps-vk.lock before calling install.
+        check_baseline_only()
+        return original_install(*args, **kwargs)
     try:
         # Preserve the reviewed upstream code; replace only its obsolete 30-day policy hook.
         app.configure_fail2ban = configure
+        app.install = guarded_install
         sys.argv = ["vps-vk", "install", "--bundle", str(root / "vendor/vps"),
                     "--endpoint", endpoint, "--vk-link-file", str(vk_link_file)]
         if qr:
@@ -25,6 +47,7 @@ def run_baseline_install(vk_link_file, endpoint, *, qr=False):
         return app.main()
     finally:
         app.configure_fail2ban, sys.argv = original_policy, original_argv
+        app.install = original_install
 
 
 def main():

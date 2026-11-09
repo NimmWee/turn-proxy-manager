@@ -10,6 +10,8 @@
 *.pem
 *.vpnbackup
 *.vkbackup
+*.sqlite3.enc
+*.pass
 
 # Runtime databases
 *.sqlite

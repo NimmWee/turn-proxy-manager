@@ -4,7 +4,7 @@
 
 ## Текущий этап
 
-**Этап 1 — базовый VPN установлен на отдельном VPS, повторная установка и выдача iPhone-профиля проверены; ручной VPN E2E ожидается.** Пользователь разрешил установку, передал VK link и проверит Anton48 на iPhone. Android из исходного репозитория работал у него ранее, но текущая установка на Android отдельно не проверена. К реализации этапов 2–8 пока не переходили.
+**iPhone E2E подтверждён, recovery/rollback проверены; реализована первая рабочая часть этапа 2.** Пользователь подтвердил интернет и IP через Anton48; сервер подтвердил handshake/rx/tx. На тестовом VPS работают SQLite metadata и отдельный root-only hot peer agent. После синтетической проверки остаются два исходных активных устройства, профиль iPhone не менялся. Android для этой установки NOT RUN. [Подробный результат этапа 2 и оставшиеся gates](STAGE2_PROGRESS.md).
 
 ## Что реализовано
 
@@ -21,6 +21,9 @@
 | `docs/BASELINE.md`, `docs/DECISIONS.md`, `docs/IMPLEMENTATION_PLAN.md` | Проверенные контракты, ограничения, решения, требования миграции и последовательный план |
 | `ftm/ssh_protection.py`, `scripts/verify_ssh_protection.py` | Применение годовой защиты SSH с бэкапом/откатом; реальная проверка фильтра, порога, nftables и persistence на тестовом VPS |
 | `ftm/baseline_deploy.py`, `tests/test_baseline_deploy.py` | Явный запуск исходного Vps на согласованном тестовом VPS с заменой только hook годового Fail2ban; baseline не меняется |
+| `ftm/store.py`, `ftm/migrations/001_initial.sql`, `ftm/metadata_cli.py` | WAL/FK/транзакции, пользователи и независимые устройства, идемпотентность, безопасный metadata import, audit и SQLite Backup API |
+| `ftm/agent.py`, `scripts/verify_devices.py` | Проверенные на VPS hot add/revoke, атомарный CID/config update и ownership registry; неизвестные peers/CID сохраняются, службы не перезапускаются |
+| `scripts/verify_recovery.py` | Реальный restore на том же VPS и rollback после инъекции ошибки; ключи, импорт и SSH сохранены |
 
 ## Проверки
 
@@ -29,12 +32,16 @@
 | Проверка | Результат |
 | --- | --- |
 | Исходные тесты Vps, Ubuntu WSL / Python 3.12.3 | **PASS: 8/8**, без пропусков |
-| Тесты Manager, Ubuntu WSL / Python 3.12.3 | **PASS: 41/41**, без пропусков |
-| Тесты Manager, Windows / Python 3.10.11 | **PASS: 37**, 4 платформенных пропуска; всего 41 тест |
-| Тесты на отдельном VPS 1 vCPU/961 MiB | **PASS: 41/41 Manager + 8/8 Vps**; binary smoke и SHA256 проверки |
+| Тесты Manager, Ubuntu WSL / Python 3.12.3 | **65/65 PASS**, без пропусков |
+| Тесты Manager, Windows / Python 3.10.11 | **61 PASS**, 4 Linux-only пропуска; всего 65 тестов |
+| Тесты на отдельном VPS 1 vCPU/961 MiB | **65/65 Manager + 8/8 Vps PASS** |
 | Годовая политика Fail2ban на VPS | **PASS**, filter/threshold/nftables/SQLite/restart, test ban удалён, fresh SSH успешен |
 | Первая и повторная установка базового VPN | **PASS**, все ключи/CID/параметры сохранены при повторе; 3 службы active, 2 peers |
 | Зашифрованный бэкап вне VPS | **PASS**, ciphertext и recovery file сохранены вне Git; decrypt/parse проверен на VPS и локально, ключ соответствует выданному iPhone-профилю |
+| Recovery / injected rollback | **PASS** на том же VPS, до начала metadata migration; не второй чистый VPS |
+| iPhone через VK | **PASS**, результат пользователя + серверные handshake/rx/tx; после recovery снова наблюдался трафик |
+| Dynamic peer control | **PASS**, реальный add/revoke синтетического WG peer без рестарта, replay persistent config в network namespace, сохранение unknown sentinel |
+| Encrypted SQLite checkpoint | **PASS**, Backup API → encryption → offsite decrypt → integrity check; это ещё не общий автоматический Manager restore |
 | SHA256 baseline + исходный package verifier | **PASS**, все 23 файла, бинарники amd64/arm64 и архив |
 | Bash syntax | **PASS** |
 | Реальный Linux amd64 binary smoke | **PASS**, help/CID/startup/shutdown; не VPN-трафик |
@@ -68,16 +75,16 @@ Read-only preflight на WSL корректно возвращает код 2: �
 
 Дополнительная среда: отдельный VPS Ubuntu 24.04.4 LTS amd64, **1 vCPU / 961 MiB RAM**, диск около 58 GiB, SSH 22. Установлены Fail2ban 1.0.2, python3-systemd, nftables, iptables, WireGuard tools, qrencode и FreeTurn 4.1.2-vps1. Прошли unit/CLI/binary проверки и повторная установка. Нагрузочный benchmark VPN ещё не выполнен. Подробности — в [отчёте SSH](SSH_PROTECTION.md) и [проверке iPhone](IPHONE_TEST.md).
 
-## Не выполнено / не подтверждено
+## Матрица приёмки и незавершённые проверки
 
 | Проверка | Статус и причина |
 | --- | --- |
 | Свежая установка/повторная установка исходного Vps на Ubuntu 24.04 1 vCPU/1 GiB | PASS с отдельным годовым Fail2ban hook; без заимствования полного Manager installer |
 | Настоящие `vps-vk status`, генерация profiles/QR | PASS — службы active, два peers, private artifacts 0600; миграция старого рабочего VPS NOT RUN |
-| Android ↔ сервер 4.1.2-vps1; Anton48 через VK TURN | iPhone — профиль выдан, ожидается результат пользователя; Android NOT RUN для этой установки, прежний успех со слов пользователя не заменяет новый тест |
+| Android ↔ сервер 4.1.2-vps1; Anton48 через VK TURN | iPhone PASS пользователем и на сервере; Android NOT RUN для этой установки |
 | Активный CID hot reload и отзыв уже открытой сессии | SOURCE ONLY — polling 10 с подтверждён в pinned source; поведение трафика не проверено |
-| WireGuard data plane, Direct/Relay E2E, DNS/IPv6 leaks | NOT RUN — binary smoke не передаёт пользовательский VPN-трафик |
-| Бэкап вне VPS и восстановление на чистом VPS | Частично PASS: offsite ciphertext, decrypt/parse и совпадение реальных ключей подтверждены. Чистое системное восстановление NOT RUN |
+| WireGuard data plane, Direct/Relay E2E, DNS/IPv6 leaks | iPhone VK data plane PASS. Direct/Auto, DNS/IPv6 leaks, новые devices и три одновременных клиента NOT RUN |
+| Бэкап и восстановление | Offsite ciphertext и same-host restore при отсутствующем state PASS; injected rollback PASS. Второй чистый хост и полный reboot NOT RUN |
 | Полная Android/Windows сборка, arm64 execution, Go rebuild | NOT RUN; Desktop checkout больших binary blobs не завершился из-за сети, текстовые исходники изучены отдельно |
 | Trusted TLS/domain/IP, Caddy, API/React, подписки, автофейловер, Windows driver/service | NOT IMPLEMENTED — последующие этапы |
 | GitHub CI и публикация | NOT RUN — изменения локальные, push не выполнялся |
@@ -86,10 +93,10 @@ Read-only preflight на WSL корректно возвращает код 2: �
 
 Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не применяют системные изменения. В binary smoke используется только временная CID-база и ephemeral loopback listener. `secure-ssh --apply` — отдельно разрешённое изменение Fail2ban. `ftm.baseline_deploy --apply` разрешён пользователем только для тестового VPS: первая установка создаёт ключи, повторная сохраняет их. SSH не перезапускался, MainPID 712 и NRestarts 0 сохранены, свежий SSH-вход после развёртывания успешен.
 
-Для Fail2ban предусмотрен бэкап прежних файлов в root-only каталоге и откат при неудачной проверке. Во время проверки откат реально сработал, после чего исправленный модуль успешно применён. Системный rollback VPN и импорт в SQLite пока не реализованы. Для отката локальной разработки используется история Git; исходный Vps остаётся в `vendor/vps/`.
+Откат Fail2ban и baseline VPN реально проверены. Metadata импортированы в SQLite без WG private keys и VK link. Новые manager devices применяются отдельным root агентом; старые legacy revoke/disable пока отклоняются до managed startup migration. SQLite/CID/PSK и registry хранятся private. Combined Manager backup/restore ещё не готов; исходный Vps остаётся в `vendor/vps/`.
 
 ## Следующий конкретный шаг
 
-Получить результат ручной проверки Anton48 на iPhone: импорт, VK TURN, HTTPS и внешний IP; на VPS проверить свежий handshake и rx/tx. Затем проверить системный restore/rollback, не выдавая decrypt round-trip за восстановление хоста. Android сохранить в списке неподтверждённых сценариев, пока его отдельно не проверят. [Инструкция и границы проверки](IPHONE_TEST.md).
+Закрыть managed startup migration и динамическую совместимость legacy CLI, ввести общий encrypted checkpoint VPN + SQLite + registry и проверить reboot/restore. Затем — ограниченный IPC/права перед FastAPI и русской панелью. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [План](STAGE2_PLAN.md), [результаты](STAGE2_PROGRESS.md).
 
 Рабочий VPS по-прежнему не используется как тестовая среда. Новый тестовый VPS предоставлен пользователем отдельно; доступ и изменение его Fail2ban разрешены текущим поручением.

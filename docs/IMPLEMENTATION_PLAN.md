@@ -42,11 +42,13 @@
 - [x] CI Ubuntu 24.04: baseline verifier, обе группы unittest, bash syntax, binary smoke. Не запускать установку и не требовать секреты.
 - [x] Обновить README, `docs/DECISIONS.md`, `docs/PROGRESS.md`: команды, PASS/FAIL/NOT RUN, rollback и следующий шаг.
 
-**Gate этапа 1:** локальные unit/CLI/smoke должны проходить. Полная приёмка требует отдельного чистого Ubuntu VPS 1 vCPU/1 GiB, Android и iPhone, реального `vps-vk status`, `vps-vk profiles`, подключения через VK и проверки профилей. До этого этап 1 отмечается «локальная часть выполнена, E2E не подтверждено»; к реализации этапа 2 не переходить.
+**Gate этапа 1:** локальные unit/CLI/smoke должны проходить. Полная приёмка требует Ubuntu VPS 1 vCPU/1 GiB, реальных клиентов, `vps-vk status/profiles`, VK-трафика и восстановления. Первоначальный запрет перехода до всех клиентских проверок уточнён текущим поручением пользователя: после подтверждённого iPhone и recovery/rollback разрешены доступные серверные работы этапа 2. Android и одновременные реальные устройства остаются открытыми gates и не объявляются проверенными.
 
 **Контракт миграции:** до любых системных изменений — зашифрованный бэкап вне VPS и подтверждённое восстановление. Сохраняются WG private/public/PSK, CID, VK link, obf key, профили iPhone/Android, endpoint/порты/subnet, firewall, Fail2ban и SSH. Незнакомые peers и чужие службы не удаляются. Отчёт плана не содержит значений секретов. Это требования будущего apply, а не уже выполненная миграция.
 
 **Обновление 10.11.2026:** пользователь предоставил отдельный VPS и VK link и разрешил базовую установку. Добавлен `ftm.baseline_deploy --apply`, заменяющий только obsolete Fail2ban hook без изменения baseline. Первая/повторная установка, status/profiles/QR и offsite encrypted backup round-trip подтверждены. Профиль iPhone подготовлен; пользовательская проверка ожидается, Android для текущего сервера NOT RUN, чистое системное restore ещё NOT RUN. Общий Manager installer остаётся dry-run.
+
+**Следующее обновление:** iPhone подтверждён пользователем и handshake/rx/tx; restore при отсутствующем state на том же VPS и rollback после инъекции ошибки PASS. Начат этап 2: SQLite, metadata CLI, защищённый root reconcile и реальный hot add/revoke синтетического peer. [План](STAGE2_PLAN.md), [результат и оставшиеся gates](STAGE2_PROGRESS.md).
 
 ## Последующие этапы
 
