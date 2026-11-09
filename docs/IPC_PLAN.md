@@ -10,4 +10,6 @@
 4. Hardened systemd unit с фиксированными writable paths и CAP_NET_ADMIN для существующего WG. Отдельный rootless API unit — только доступ к socket, без sudo и доступа к VPN keys. Не открывать публичные HTTP endpoints до auth/TLS.
 5. Целевые проверки границы: чужой UID и неизвестная/слишком большая команда отклоняются; от API UID выполняется реальный add/revoke синтетического peer без изменения профиля iPhone. Без автотеста на каждую вспомогательную функцию. После этого FastAPI и сборка русской панели вне VPS.
 
-Пока это план; IPC service ещё не реализован и не развёрнут. Общий checkpoint нужно расширять при добавлении новых persistent настроек.
+Реализовано и установлено на тестовом VPS: `ftm.control`, `ftm.control_install` и `ftm-control.service`. SQLite остаётся root:root 0600, socket root:ftm-api 0660 в каталоге 0750. От API UID выполнены настоящий hot add, идемпотентный повтор и revoke; чужой UID с той же группой отвергнут. Неизвестная команда и path field отвергнуты, API не читает SQLite/registry/obf key напрямую. Config/profile и MainPID VPN/SSH после проверки совпали. Три целевых boundary tests PASS. Maintenance lock возвращает unavailable меньше чем за секунду вместо блокировки worker.
+
+Добавлен metrics RPC с CPU/RAM и WG transfer/latest-handshakes, без credential-bearing dump. Обычный worker занимал около 11 MiB по systemd. Постоянного reconcile timer ещё нет; изменения из IPC применяются сразу, error outbox остаётся повторяемым. Общий checkpoint расширяется настройками private API при их появлении.
