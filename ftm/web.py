@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import control
+from .client_protocol import ClientFault
 from .web_auth import Auth, InvalidCredentials, RateLimited, SESSION_TTL, load_config
 
 COOKIE = "ftm_session"
@@ -87,6 +88,16 @@ class NewDevice(StrictBody):
     request_id: uuid.UUID
 
 
+class ExportSubscription(StrictBody):
+    password: str = Field(min_length=1, max_length=1024, strict=True)
+    request_id: uuid.UUID
+
+
+class ExportBootstrap(ExportSubscription):
+    name: str = Field(min_length=1, max_length=128, strict=True)
+    platform: Literal['android', 'windows', 'other']
+
+
 def create_app(config, *, rpc=control.request, static_dir=None):
     auth = Auth(config)
     prefix = "/a/" + auth.config["panel_slug"]
@@ -141,6 +152,8 @@ def create_app(config, *, rpc=control.request, static_dir=None):
         try:
             async with rpc_limit:
                 result = await asyncio.to_thread(rpc, operation, args)
+        except ClientFault as error:
+            raise HTTPException(error.status, error.message, headers={'Retry-After': '600'} if error.status == 429 else None) from None
         except (ValueError, RuntimeError, OSError):
             raise HTTPException(503, "Сервер занят или действие отклонено. Повторите позже") from None
         if isinstance(result, dict) and isinstance(result.get("apply"), dict) and result["apply"].get("errors"):
@@ -209,6 +222,18 @@ def create_app(config, *, rpc=control.request, static_dir=None):
     @app.post(prefix + "/api/users/{identifier}/enabled", dependencies=[Depends(mutation)])
     async def user_enabled(identifier: uuid.UUID, value: Enabled):
         return await invoke("users.set_enabled", {"id": str(identifier), "enabled": value.enabled})
+
+    @app.post(prefix + '/api/users/{identifier}/subscription-export', dependencies=[Depends(mutation)])
+    async def subscription_export(identifier: uuid.UUID, value: ExportSubscription):
+        if not public_origin:
+            raise HTTPException(403, 'Выдача доступна только через защищённую панель')
+        return await invoke('admin.subscription_export', {'user_id': str(identifier), **value.model_dump(mode='json')})
+
+    @app.post(prefix + '/api/users/{identifier}/bootstrap-export', dependencies=[Depends(mutation)])
+    async def bootstrap_export(identifier: uuid.UUID, value: ExportBootstrap):
+        if not public_origin:
+            raise HTTPException(403, 'Выдача доступна только через защищённую панель')
+        return await invoke('admin.bootstrap_export', {'user_id': str(identifier), **value.model_dump(mode='json')})
 
     @app.get(prefix + "/api/devices", dependencies=[Depends(session)])
     async def devices():

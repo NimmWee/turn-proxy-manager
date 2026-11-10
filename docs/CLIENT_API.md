@@ -34,4 +34,4 @@ Windows113 tests108PASS/5skips; WSL113 tests107PASS/6web dependency skips, basel
 
 `ftm.reference_client` — явно **контрактный caller**, без адаптера VPN и без native secure storage. HTTPS certificate validation включена, redirects запрещены. LKG/ETag обновляются только после полного validate и local share assembly; malformed update/сбой сохраняет последнюю конфигурацию,401/403 помечает REVOKED. Сохранение LKG в памяти не является доказательством непрерывности VPN-трафика.
 
-Internal TLS override/firewall и [bootstrap/claim](BOOTSTRAP.md) уже проверены. Далее native applications. UI выпуска подписок/экспорта ещё требует re-auth и пока не добавлен.
+Internal TLS override/firewall, [bootstrap/claim](BOOTSTRAP.md) и [выдача из панели с root re-auth](ADMIN_EXPORT.md) уже проверены. Далее native applications и QR.

@@ -17,7 +17,7 @@ def generate_keys():
     return private.decode(), public.decode()
 
 
-def issue_file(service, output, user_id, *, name, platform, ttl_seconds=3600, keypair=generate_keys):
+def private_file(output, producer):
     output = Path(output).absolute()
     parent = output.parent
     if (any(p.is_symlink() for p in (parent, *parent.parents)) or parent.stat().st_uid != 0
@@ -35,10 +35,15 @@ def issue_file(service, output, user_id, *, name, platform, ttl_seconds=3600, ke
                     os.fsync(parent_fd)
                 finally:
                     os.close(parent_fd)
-            return service.issue(user_id, name=name, platform=platform, keypair=keypair, deliver=deliver, ttl_seconds=ttl_seconds)
+            return producer(deliver)
     except BaseException:
         output.unlink(missing_ok=True)
         raise
+
+
+def issue_file(service, output, user_id, *, name, platform, ttl_seconds=3600, keypair=generate_keys):
+    return private_file(output, lambda deliver: service.issue(user_id, name=name, platform=platform,
+                        keypair=keypair, deliver=deliver, ttl_seconds=ttl_seconds))
 
 
 def main():

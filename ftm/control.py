@@ -26,13 +26,21 @@ def _fields(value, required=(), optional=()):
     return value
 
 
-def execute(request, *, uid, api_uid, store, agent):
+def execute(request, *, uid, api_uid, store, agent, exports=None):
     if uid not in (0, api_uid):
         raise PermissionError("Control peer is not authorized")
     _fields(request, ("v", "op", "args"))
     if type(request["v"]) is not int or request["v"] != 1 or not isinstance(request["op"], str):
         raise ValidationError("Unsupported control protocol")
     operation, args = request["op"], request["args"]
+    if operation in ('admin.bootstrap_export', 'admin.subscription_export'):
+        required = ('user_id', 'request_id', 'password', 'name', 'platform') if operation == 'admin.bootstrap_export' else ('user_id', 'request_id', 'password')
+        _fields(args, required)
+        if not all(isinstance(v, str) for v in args.values()):
+            raise ClientFault('invalid_request')
+        if exports is None:
+            raise ClientFault('service_unavailable')
+        return exports.export('bootstrap' if operation == 'admin.bootstrap_export' else 'subscription', args)
     if operation == "client.bootstrap_claim":
         _fields(args, ("nonce", "device_id", "device_token_hash", "source_ip"))
         if not all(isinstance(v, str) for v in args.values()) or len(args['source_ip']) > 45:
@@ -133,7 +141,7 @@ class _Handler(socketserver.StreamRequestHandler):
                 # recovery phrase. Return unavailable instead of blocking the
                 # single control worker and accumulating queued requests.
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                result = execute(value, uid=uid, api_uid=self.server.api_uid, store=self.server.store, agent=self.server.agent)
+                result = execute(value, uid=uid, api_uid=self.server.api_uid, store=self.server.store, agent=self.server.agent, exports=self.server.exports)
             finally:
                 os.close(fd)
             response = {"ok": True, "result": result}
@@ -162,6 +170,7 @@ def serve():
 
         def service_actions(self):
             self.reconciler.tick()
+            self.exports.tick()
 
         def handle_error(self, request, client_address):
             print("Control request failed; details withheld", file=__import__("sys").stderr)
@@ -199,6 +208,8 @@ def serve():
             os.chown(SOCKET, 0, account.pw_gid)
             os.chmod(SOCKET, 0o660)
             server.api_uid, server.store, server.agent = account.pw_uid, store, agent
+            from .admin_exports import AdminExports
+            server.exports = AdminExports(store, agent)
             server.reconciler = ReconcileLoop(store, agent)
             server.serve_forever(poll_interval=0.5)
     finally:

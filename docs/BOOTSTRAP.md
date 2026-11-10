@@ -1,10 +1,12 @@
 # Персональный стартовый профиль и активация
 
-10.11.2026. Серверный bootstrap/claim установлен и проверен на согласованном тестовом VPS. Это ещё не кнопка панели и не готовый импорт Android/Windows: интеграция нового envelope в нативные приложения остаётся отдельной работой.
+10.11.2026. Серверный bootstrap/claim установлен и проверен на согласованном тестовом VPS. Следующим блоком добавлена [выдача из панели](ADMIN_EXPORT.md). Интеграция нового envelope в нативные Android/Windows приложения остаётся отдельной работой.
 
 ## Выдача
 
 Root-only `python3 -m ftm.bootstrap_cli --user-id UUID --name NAME --platform android --output /root/PRIVATE/new-bootstrap.json` создаёт новый персональный peer и `ftm-bootstrap` v1 artifact. Нужны enabled user и действующая subscription identity (её root выпуск описан в STAGE4_PROGRESS). `PRIVATE` — существующий root700 каталог; файл должен быть новым, получает0600. CLI печатает только device_id/state/expiry. Общий Manager install/apply не включается.
+
+На установленном стенде выполнять module command из `/opt/ftm/current`; Python package глобально в system site-packages не устанавливался.
 
 WG private key генерируется wg tools только для этого устройства. В SQLite находятся public key, PSK/CID и SHA256 nonce; WG private key и plaintext nonce в БД не записываются. В private artifact — готовый native freeturn share и отдельные поля management/одноразового claim. Не добавлять nonce в upstream freeturn JSON. Схемы: `schemas/bootstrap-profile-v1.schema.json`, `schemas/bootstrap-claim-v1.schema.json`.
 
@@ -32,4 +34,4 @@ Offsite `/root/ftm-managed-05ae079d39.vpnbackup` → приватный лока
 
 Финальный runtime с обеими JSON Schema: `671bdabd340bf011` (первый functional proof — `c1f678eee019424b`, код поведения тот же). Offsite snapshot после упаковки совпал с live; root0600 SQLite, собственное internal правило и все8 служб healthy.
 
-Namespace использует host-loopback WG underlay и обходит TURN. T10 с VK и настоящим Android/Windows при заблокированном внешнем443 **NOT RUN**. iPhone profile не менялся; новый physical iPhone E2E NOT RUN. Следующие блоки — admin re-auth/выдача из панели, затем native integration и безопасное применение обновлений.
+Namespace использует host-loopback WG underlay и обходит TURN. T10 с VK и настоящим Android/Windows при заблокированном внешнем443 **NOT RUN**. iPhone profile не менялся; новый physical iPhone E2E NOT RUN. [Admin re-auth/выдача из панели](ADMIN_EXPORT.md) добавлены следующим блоком; далее native integration и безопасное применение обновлений.

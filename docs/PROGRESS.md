@@ -6,7 +6,9 @@
 
 ## Текущий этап
 
-**Персональный bootstrap/claim реализован и установлен.** Root-only private artifact, hash-only TTL nonce, claim только с собственного VPN IP, atomic consume/idempotent retry и переход к managed без замены WG keys/CID. Реальный namespace proof, public-origin XFF spoof отказ, cleanup и новая offsite копия PASS. Это серверная часть; выдача из панели и native import ещё впереди. [Подробности](BOOTSTRAP.md).
+**Выдача из панели с повторным паролем работает.** Root re-auth, private short-lived delivery cache и durable request UUID исключают повторный peer/rotation при retry. Реальный API и браузерный download subscription/bootstrap проверены; временные подключения убраны. Финальный checkpoint17/2 проверен вне VPS. [Проверки и ограничения](ADMIN_EXPORT.md). Следующие блоки — native import/secure storage/Connection Manager, QR и реальные VK bootstrap/leak tests.
+
+**Персональный bootstrap/claim реализован и установлен.** Root-only private artifact, hash-only TTL nonce, claim только с собственного VPN IP, atomic consume/idempotent retry и переход к managed без замены WG keys/CID. Реальный namespace proof, public-origin XFF spoof отказ, cleanup и offsite копия PASS. Выдача из панели добавлена следующим блоком выше; native import ещё впереди. [Подробности](BOOTSTRAP.md).
 
 **Разработка возобновлена новым поручением после ночного cutoff.** Client HTTPS API enroll/status/subscription уже установлен и реально проверен через restricted IPC к kernel WG. Per-device config без private key, pending/ETag304, revoke-before304 и bearer scope isolation PASS. Это серверный контракт с reference caller, не готовое Android/Windows приложение. [Протокол и проверки](CLIENT_API.md).
 
@@ -54,7 +56,7 @@
 
 ## Проверки
 
-Последний полный локальный прогон —121 tests: Windows116PASS/5skips, WSL114PASS/7web dependency skips, baseline8 и binary smoke PASS. Ниже сохранена историческая матрица ранних этапов; результаты новых блоков находятся в документах выше.
+Последний полный локальный прогон —125 tests: Windows118PASS/7skips, WSL115PASS/10skips; отдельно3/3 root file checks PASS на тестовом VPS. Baseline8 и binary smoke PASS. Ниже сохранена историческая матрица ранних этапов; результаты новых блоков находятся в документах выше.
 
 | Проверка | Результат |
 | --- | --- |
@@ -125,6 +127,6 @@ Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не
 
 ## Следующий конкретный шаг
 
-Managed startup, checkpoint, IPC, русская панель, IP/internal HTTPS, client registration/subscriptions и серверный bootstrap/claim проверены. Следующий шаг — admin re-auth/export из панели и native import этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [Bootstrap](BOOTSTRAP.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
+Managed startup, checkpoint, IPC, русская панель, IP/internal HTTPS, client registration/subscriptions, bootstrap/claim и admin re-auth/export проверены. Следующий шаг — native import/secure storage/Connection Manager и QR. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [Выдача](ADMIN_EXPORT.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
 
 Рабочий VPS по-прежнему не используется как тестовая среда. Новый тестовый VPS предоставлен пользователем отдельно; доступ и изменение его Fail2ban разрешены текущим поручением.

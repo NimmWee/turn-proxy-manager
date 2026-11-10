@@ -17,8 +17,9 @@ class Bootstraps:
         self.store, self.agent = store, agent
         self.clock = clock or (lambda: datetime.datetime.now(datetime.timezone.utc))
 
-    def issue(self, user_id, *, name, platform, keypair, deliver, ttl_seconds=3600):
+    def issue(self, user_id, *, name, platform, keypair, deliver, ttl_seconds=3600, request_id=None):
         user_id = _identifier(user_id)
+        request_id = _identifier(request_id) if request_id is not None else str(uuid.uuid4())
         if platform not in ('android', 'windows', 'other') or type(ttl_seconds) is not int or not 60 <= ttl_seconds <= 86400:
             raise ValidationError('Invalid bootstrap platform or TTL')
         private, public = keypair()
@@ -32,8 +33,8 @@ class Bootstraps:
                 raise ValidationError('Enabled subscription required before bootstrap issuance')
             # New random request identity: retry by issuing another artifact is
             # explicit, never silent reuse of an undelivered private key.
-            device = self.store._create_device(db, user_id, name, platform, public, str(uuid.uuid4()))
-            identifier = str(uuid.uuid4())
+            device = self.store._create_device(db, user_id, name, platform, public, request_id)
+            identifier = request_id
             db.execute('INSERT INTO bootstraps VALUES(?,?,?,?,NULL)', (identifier, device['id'], _digest(nonce, 'bootstrap'), expires))
             service = ClientService(self.store, self.agent)
             manifest = service.manifest(device, self.agent._validate(device))

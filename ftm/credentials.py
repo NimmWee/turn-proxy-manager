@@ -30,8 +30,9 @@ class Credentials:
     def __init__(self, store):
         self.store = store
 
-    def issue_subscription(self, user_id, *, deliver=None):
+    def issue_subscription(self, user_id, *, deliver=None, request_id=None):
         user_id = _identifier(user_id)
+        request_id = _identifier(request_id) if request_id is not None else None
         token = "ftmu1_" + secrets.token_urlsafe(32)
         with self.store.transaction() as db:
             if not db.execute("SELECT 1 FROM users WHERE id=? AND enabled=1", (user_id,)).fetchone():
@@ -41,6 +42,9 @@ class Credentials:
             db.execute("""INSERT INTO subscriptions(id,user_id,token_hash,version,revoked_at) VALUES(?,?,?,?,NULL)
                        ON CONFLICT(user_id) DO UPDATE SET token_hash=excluded.token_hash,version=excluded.version,revoked_at=NULL""",
                        (identifier, user_id, _digest(token, "user"), version))
+            if request_id is not None:
+                db.execute('INSERT INTO settings VALUES(?,?)', ('admin_export/' + request_id,
+                           json.dumps({'kind': 'subscription', 'user_id': user_id})))
             self.store._audit(db, "subscription.rotate" if previous else "subscription.issue", "subscription", identifier)
             value = {"id": identifier, "user_id": user_id, "version": version, "token": token}
             if deliver:

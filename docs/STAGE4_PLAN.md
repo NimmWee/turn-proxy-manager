@@ -11,7 +11,7 @@
 - [x] Целевые проверки hash-only persistence, scope separation, concurrent rotation, disable/re-enable и отсутствие случайного отзыва устройств при смене URL. Root-only CLI пишет новый секрет в новый private0600 файл; не принимает токен через argv и не печатает его.
 - [x] Реальная проверка на VPS с временным peer: создать/применить, rotate/revoke credentials и убедиться, что user URL rotation сохраняет WG/CID; отозвать peer в конце, сохранить профиль/ключи/PID. Новая offsite копия, docs и local commit.
 
-Это **foundation**, без публичных client endpoints и UI кнопок выдачи. Выпуск из панели требует admin re-auth и отдельной защиты export. Root API не расширять секретными операциями до этого контракта.
+Это credential foundation. Последующие публичные endpoints и UI выдачи выполнены отдельными блоками ниже. Секретные операции панели требуют root admin re-auth и ограниченной private delivery: [контракт](ADMIN_EXPORT.md).
 
 ## Следующие блоки
 
@@ -22,7 +22,8 @@
 - [x] Узкий VPN HTTPS allowlist с проверкой IP TLS identity, client auth/throttling и сохранением последней рабочей конфигурации. Domain migration ещё впереди. [Проверки](INTERNAL_HTTPS.md).
 - [x] Контрактный reference caller явно отделён от реальных Android/Windows.
 - [x] Серверный bootstrap claim TTL/one-time consume, root-only private issuance и reference transition. [Проверки](BOOTSTRAP.md).
-- [ ] Выдача профилей из панели с admin re-auth, безопасная повторная доставка/retention и QR.
+- [x] Выдача профилей из панели с root admin re-auth, безопасная повторная доставка/retention. [Проверки](ADMIN_EXPORT.md).
+- [ ] QR после native import contract; реальный blocked-public443 → VK → bootstrap T10, native last-good apply/rollback.
 - [ ] Клиентская интеграция и настоящие Android/Windows devices.
 
 Ночное окно завершено. Разработка возобновлена новым поручением пользователя10.11.2026; старый cutoff не ограничивает это продолжение. Ночная автоматизация не возобновляется.
