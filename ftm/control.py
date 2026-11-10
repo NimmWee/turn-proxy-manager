@@ -42,6 +42,9 @@ def execute(request, *, uid, api_uid, store, agent):
     if operation == "users.list":
         _fields(args)
         return store.list_users()
+    if operation == "events.list":
+        _fields(args, optional=("limit",))
+        return store.list_events(args.get("limit", 100))
     if operation == "users.create":
         _fields(args, ("name",), ("device_limit",))
         return store.create_user(args["name"], args.get("device_limit"))

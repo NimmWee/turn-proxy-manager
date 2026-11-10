@@ -65,3 +65,9 @@ Runtime41768b222d0f96cc. Последний offsite `/root/ftm-managed-bde749470
 `ENROLLMENT_PROGRESS.md`: одна transaction для user auth/limit/IP/CID/device/outbox/credential hash, client-generated CID/token/private key. Real synthetic caller → periodic worker → kernel WG PASS; repeat/revoke/URL rotation не меняют другие peers. Сетевую потерю HTTP не инъецировали: проверен caller-held token при игнорировании metadata result. Публичного client API нет. Runtimeba506629de5988da, Windows106 tests101PASS/5skips, WSL106 tests103PASS/3web skips.
 
 Offsite `/root/ftm-managed-e3336b9bbf.vpnbackup`, SHA256dab56a048c677b26e80f487e58824dfbc5f01978efe5628b7f91efd5fd2cf0ca; local private `manager-enrollment.vpnbackup`, decode/stage PASS(10metadata/2peers/public web). Синтетические10 rows — история проверок, active только2 исходных. Ночное окно ещё до08:20Томск; закончить только независимый безопасный UI/read block, затем сверить итоговое состояние и не начинать новые изменения после cutoff.
+
+## Обновление 08:00 Томск: журнал
+
+Read-only RU журнал в панели установлен и проверен HTTPS браузером desktop/mobile/dark:92 реальных событий, поиск/empty, no overflow/JS errors. Auth401/200, response allowlist и IPC limit guards PASS. Без новых UI автотестов, production build и6 существующих boundary checks. `EVENTS_PROGRESS.md`.
+
+Runtime **46acba450725bbf4** (проверен readlink). API/control перезапущены, VPN/SSH/Caddy PID сохранены. Root metadata не менялась; последний актуальный offsite остаётся e3336b9bbf/dab56a048c677b26e80f487e58824dfbc5f01978efe5628b7f91efd5fd2cf0ca. Клиентских публичных endpoints/secret IPC нет. До08:20 завершить финальную проверку/передачу; послеcutoff новые изменения не начинать. GitHub не отправлять.

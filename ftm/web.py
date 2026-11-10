@@ -189,6 +189,10 @@ def create_app(config, *, rpc=control.request, static_dir=None):
     async def users():
         return await invoke("users.list")
 
+    @app.get(prefix + "/api/events", dependencies=[Depends(session)])
+    async def events():
+        return await invoke("events.list", {"limit": 100})
+
     @app.post(prefix + "/api/users", dependencies=[Depends(mutation)])
     async def new_user(value: NewUser):
         return await invoke("users.create", value.model_dump())

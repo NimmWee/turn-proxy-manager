@@ -136,6 +136,18 @@ class Store:
                               (user_id,) if user_id else ())
             return [dict(row) for row in rows]
 
+    def list_events(self, limit=100):
+        if type(limit) is not int or not 1 <= limit <= 200:
+            raise ValidationError("Invalid event limit")
+        with self.connect() as db:
+            return [dict(row) for row in db.execute("""SELECT e.id,e.action,e.subject_type,e.ts,
+                    COALESCE(d.name,u.name,su.name,'Сервер') AS subject_name
+                    FROM audit_events e
+                    LEFT JOIN devices d ON e.subject_type='device' AND d.id=e.subject_id
+                    LEFT JOIN users u ON e.subject_type='user' AND u.id=e.subject_id
+                    LEFT JOIN subscriptions s ON e.subject_type='subscription' AND s.id=e.subject_id
+                    LEFT JOIN users su ON su.id=s.user_id ORDER BY e.id DESC LIMIT ?""", (limit,))]
+
     def get_device(self, identifier):
         """Internal credential-bearing result; ordinary CLI output must use list_devices."""
         with self.connect() as db:
