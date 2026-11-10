@@ -8,6 +8,8 @@
 
 Существующий share codec/JSON Schema проверен настоящим pinned Go parser на трёх synthetic profiles. Android source mapping/SHA проверены, runtime NOT RUN. [Контракт](PROFILE_CONTRACT.md). Клиентские private keys в нормальном enrollment ещё предстоит оставить на клиенте; неизвестные managed поля нельзя добавлять в upstream share JSON.
 
+Атомарное enrollment core сохраняет WG private key/device token на стороне caller и принимает только public key/CID/hash. Concurrent retry/limit/collision/revoke PASS; на VPS periodic worker применил настоящий synthetic peer. Публичный enrollment API/config ещё впереди. [Границы проверки](ENROLLMENT_PROGRESS.md).
+
 **Русская панель доступна по доверенному HTTPS.** Caddy с Let’s Encrypt IP certificate, Secure cookie, фиксированный Origin/Host, rootless API через Unix IPC. В браузере проверены вход и создание/отключение пользователя. Реальные private/public restore и injected rollback сохраняют границу доступа; offsite копия проверена. [Результаты и ограничения](PUBLIC_HTTPS_PROGRESS.md).
 
 **Фоновый reconciler установлен.** Durable pending/applying add/revoke, отмена устаревшей операции и lock contention проверены на WG без VPN/SSH restart; профили сохранены. [Проверки](HTTPS_RECONCILE_PROGRESS.md). История private UI: [STAGE3_PROGRESS.md](STAGE3_PROGRESS.md). Выдача новых клиентских профилей, подписки и полный installer ещё не готовы.

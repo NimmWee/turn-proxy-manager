@@ -8,6 +8,7 @@ import ipaddress
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 import sqlite3
 import stat
@@ -144,6 +145,12 @@ class Store:
             return dict(row)
 
     def create_device(self, user_id, name, platform, public_key, request_id, *, vpn_type="wg"):
+        with self.transaction() as db:
+            return self._create_device(db, user_id, name, platform, public_key, request_id, vpn_type=vpn_type)
+
+    def _create_device(self, db, user_id, name, platform, public_key, request_id, *, vpn_type="wg",
+                       client_id=None, credential_hash=None):
+        """Caller owns a write transaction; also used by atomic enrollment."""
         name = _name(name)
         if platform not in ("android", "windows", "ios", "other") or vpn_type != "wg":
             raise ValidationError("Unsupported platform or unverified VPN backend")
@@ -152,38 +159,42 @@ class Store:
         if not isinstance(request_id, str) or not 1 <= len(request_id) <= 200:
             raise ValidationError("Invalid idempotency key")
         request_hash = _hash(request_id)
-        fingerprint = _hash(json.dumps([user_id, name, platform, public_key, vpn_type], separators=(",", ":")))
-        with self.transaction() as db:
-            user = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
-            if user is None or not user["enabled"]:
-                raise ValidationError("User is missing or disabled")
-            existing = db.execute("SELECT * FROM devices WHERE user_id=? AND request_hash=?", (user_id, request_hash)).fetchone()
-            if existing:
-                if existing["request_fingerprint"] != fingerprint:
-                    raise Conflict("Idempotency key was already used for a different request")
-                return dict(existing)
-            active = db.execute("SELECT count(*) FROM devices WHERE user_id=? AND enabled=1", (user_id,)).fetchone()[0]
-            if user["device_limit"] is not None and active >= user["device_limit"]:
-                raise ValidationError("Device limit reached")
-            subnet = ipaddress.ip_network(db.execute("SELECT value FROM settings WHERE key='subnet'").fetchone()[0])
-            next_ip = int(db.execute("SELECT value FROM settings WHERE key='next_ip'").fetchone()[0])
-            next_ip = max(10, next_ip)
-            occupied = {row[0] for row in db.execute("SELECT ip FROM devices")}
-            while next_ip <= 254 and str(subnet.network_address + next_ip) in occupied:
-                next_ip += 1
-            if next_ip > 254:
-                raise ValidationError("VPN address pool exhausted")
-            identifier = str(uuid.uuid4())
-            psk = base64.b64encode(secrets.token_bytes(32)).decode()
-            db.execute("""INSERT INTO devices(id,user_id,name,platform,vpn_type,wg_public_key,preshared_key,cid,ip,
-                       enabled,state,origin,revision,request_hash,request_fingerprint,created_at)
-                       VALUES(?,?,?,?,?,?,?,?,?,1,'pending','manager',1,?,?,?)""",
-                       (identifier, user_id, name, platform, vpn_type, public_key, psk, secrets.token_hex(16),
-                        str(subnet.network_address + next_ip), request_hash, fingerprint, _now()))
-            db.execute("UPDATE settings SET value=? WHERE key='next_ip'", (str(next_ip + 1),))
-            self._queue(db, identifier, 1)
-            self._audit(db, "device.create", "device", identifier)
-            return dict(db.execute("SELECT * FROM devices WHERE id=?", (identifier,)).fetchone())
+        binding = [user_id, name, platform, public_key, vpn_type]
+        if client_id is not None or credential_hash is not None:
+            if (not isinstance(client_id, str) or not re.fullmatch(r"[a-f0-9]{32}", client_id)
+                    or not isinstance(credential_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", credential_hash)):
+                raise ValidationError("Invalid enrollment binding")
+            binding.append({"client_id": client_id, "credential_hash": credential_hash})
+        fingerprint = _hash(json.dumps(binding, separators=(",", ":")))
+        user = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+        if user is None or not user["enabled"]:
+            raise ValidationError("User is missing or disabled")
+        existing = db.execute("SELECT * FROM devices WHERE user_id=? AND request_hash=?", (user_id, request_hash)).fetchone()
+        if existing:
+            if existing["request_fingerprint"] != fingerprint:
+                raise Conflict("Idempotency key was already used for a different request")
+            return dict(existing)
+        active = db.execute("SELECT count(*) FROM devices WHERE user_id=? AND enabled=1", (user_id,)).fetchone()[0]
+        if user["device_limit"] is not None and active >= user["device_limit"]:
+            raise ValidationError("Device limit reached")
+        subnet = ipaddress.ip_network(db.execute("SELECT value FROM settings WHERE key='subnet'").fetchone()[0])
+        next_ip = max(10, int(db.execute("SELECT value FROM settings WHERE key='next_ip'").fetchone()[0]))
+        occupied = {row[0] for row in db.execute("SELECT ip FROM devices")}
+        while next_ip <= 254 and str(subnet.network_address + next_ip) in occupied:
+            next_ip += 1
+        if next_ip > 254:
+            raise ValidationError("VPN address pool exhausted")
+        identifier = str(uuid.uuid4())
+        psk = base64.b64encode(secrets.token_bytes(32)).decode()
+        db.execute("""INSERT INTO devices(id,user_id,name,platform,vpn_type,wg_public_key,preshared_key,cid,ip,
+                   enabled,state,origin,revision,request_hash,request_fingerprint,created_at)
+                   VALUES(?,?,?,?,?,?,?,?,?,1,'pending','manager',1,?,?,?)""",
+                   (identifier, user_id, name, platform, vpn_type, public_key, psk, client_id or secrets.token_hex(16),
+                    str(subnet.network_address + next_ip), request_hash, fingerprint, _now()))
+        db.execute("UPDATE settings SET value=? WHERE key='next_ip'", (str(next_ip + 1),))
+        self._queue(db, identifier, 1)
+        self._audit(db, "device.create", "device", identifier)
+        return dict(db.execute("SELECT * FROM devices WHERE id=?", (identifier,)).fetchone())
 
     def revoke_device(self, identifier):
         with self.transaction() as db:
