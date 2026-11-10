@@ -192,6 +192,7 @@ class Store:
                 raise ValidationError("Device not found")
             if device["origin"] == "legacy" and not db.execute("SELECT 1 FROM settings WHERE key='managed_legacy_adopted' AND value='1'").fetchone():
                 raise ValidationError("Legacy revocation requires managed startup migration")
+            db.execute("UPDATE device_tokens SET revoked_at=? WHERE device_id=? AND revoked_at IS NULL", (_now(), identifier))
             if not device["enabled"]:
                 return
             revision = device["revision"] + 1
@@ -210,6 +211,8 @@ class Store:
                 raise ValidationError("Legacy user disable requires managed startup migration")
             db.execute("UPDATE users SET enabled=?,updated_at=? WHERE id=?", (int(enabled), _now(), identifier))
             if not enabled:
+                db.execute("""UPDATE device_tokens SET revoked_at=? WHERE revoked_at IS NULL
+                           AND device_id IN (SELECT id FROM devices WHERE user_id=?)""", (_now(), identifier))
                 for device in db.execute("SELECT id,revision FROM devices WHERE user_id=? AND enabled=1", (identifier,)).fetchall():
                     revision = device["revision"] + 1
                     db.execute("UPDATE devices SET enabled=0,state='revoking',revision=? WHERE id=?", (revision, device["id"]))

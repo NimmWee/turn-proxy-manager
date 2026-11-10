@@ -47,3 +47,9 @@ Runtime `4bbbbe94efe9e7a5`. Последний offsite-verified checkpoint `/roo
 Панель уже доступна по trusted IP HTTPS; localhost API остаётся закрыт снаружи. Secure cookie, фиксированный HTTPS Origin, Host/CSRF, Caddy secret route, injected enable rollback и настоящий private/public restore/rollback PASS. Browser desktop/mobile login и HTTPS create/disable user PASS, после restore повторный login PASS. Профиль сохранён; enable не перезапускал VPN/SSH, отдельный restore перезапускал VPN/API/Caddy по назначению. `PUBLIC_HTTPS_PROGRESS.md` — текущий результат, более ранние private/probe записи выше исторические.
 
 Runtime b41b929edcd1f2c4. Checkpoint `/root/ftm-managed-289a6f6872.vpnbackup`, SHA256 3ba1222f4c62491857a8762f24edf044489ed1989f2cb26dbf44a24cb1648593; local private `manager-public-https.vpnbackup`, offsite stage PASS. Root `panel-login.json` скачан заново, в нём public_url; секреты не печатать. Следующий этап — subscription/device credentials/enrollment. Нет clean-host/ACME cache restore, domain migration и phone/client E2E; не объявлять всё ТЗ принятым.
+
+## Обновление 07:40 Томск: credential foundation
+
+Stage4 hash-only lifecycle реализован и реально проверен с временным WG peer/RPC/root CLI; `STAGE4_PROGRESS.md`. Root SQLite права не менялись, iPhone профиль и четыре service PID сохранены. Тестовый peer отозван; активных исходных2. Публичных client routes/секретных IPC пока нет.
+
+Runtime486619c38bbddd4c. Новая offsite копия `/root/ftm-managed-d8c6d0fb43.vpnbackup`, SHA2569b9b35a07d80fabbca16741d286d1ee770f30baeb7d4add88f4e1a0182d66a90; local private `manager-credentials.vpnbackup`, decode/stage PASS(9metadata/2peers/public web config). Следующий доступный блок — pinned Go/Android parsers и совместимый profile contract; refs core21dca376... и androidbe516f112... HEAD совпадают с lock. Go на рабочем ПК1.26.2 windows/386, kotlinc пока отсутствует; компиляцию на VPS не выполнять.
