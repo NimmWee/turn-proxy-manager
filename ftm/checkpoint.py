@@ -347,7 +347,10 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
             except BaseException:
                 raise RuntimeError("Restore failed and recovery needs root attention") from None
             raise RuntimeError("Restore failed; previous checkpoint recovered") from None
-    return {"restored": True, "same_host_only": True, "ssh_and_firewall_changed": False,
+    from .internal_https import HOOK
+    internal_synced = includes_edge and HOOK.exists()
+    return {"restored": True, "same_host_only": True, "ssh_and_firewall_changed": bool(internal_synced),
+            "unrelated_firewall_or_ssh_changed": False, "internal_https_rule_synced": bool(internal_synced),
             "web_settings_restored": includes_web, "api_sessions_reset": api_was_active,
             "https_config_regenerated": includes_edge}
 

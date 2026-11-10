@@ -20,7 +20,7 @@ Manifest содержит только своё устройство, public key
 
 `ftm.managed_profile` проверяет contract/key/origin/размер и собирает существующий freeturn v1 share с **локальным** private key. Caller обязан предоставить пару WG keys, созданную нативным backend. Политика IPv6 явно block; реальный клиент должен обеспечить её на уровне ОС. Нативные DNS/IPv6 leak tests NOT RUN.
 
-`management.internal_api_ip` пока только адрес для следующего internal transport блока: узкий firewall/override ещё не включён этим шагом. Использовать публичный HTTPS origin. VK credential lifetime/CAPTCHA по-прежнему могут требовать ручного действия; Direct/Auto здесь не реализован.
+`management.internal_api_ip` используется при явном выборе internal transport; узкий firewall и TLS override проверены следующим блоком: [INTERNAL_HTTPS.md](INTERNAL_HTTPS.md). Публичный HTTPS origin остаётся TLS identity и адресом первой регистрации. VK credential lifetime/CAPTCHA по-прежнему могут требовать ручного действия; Direct/Auto здесь не реализован.
 
 ## Что проверено
 
@@ -34,4 +34,4 @@ Windows113 tests108PASS/5skips; WSL113 tests107PASS/6web dependency skips, basel
 
 `ftm.reference_client` — явно **контрактный caller**, без адаптера VPN и без native secure storage. HTTPS certificate validation включена, redirects запрещены. LKG/ETag обновляются только после полного validate и local share assembly; malformed update/сбой сохраняет последнюю конфигурацию,401/403 помечает REVOKED. Сохранение LKG в памяти не является доказательством непрерывности VPN-трафика.
 
-Далее internal TLS override/firewall, bootstrap/claim и native applications. UI выпуска подписок/экспорта ещё требует re-auth и пока не добавлен.
+Internal TLS override/firewall уже проверен. Далее bootstrap/claim и native applications. UI выпуска подписок/экспорта ещё требует re-auth и пока не добавлен.

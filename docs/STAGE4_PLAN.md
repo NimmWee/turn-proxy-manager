@@ -19,7 +19,9 @@
 - [x] Enrollment: on-device key, idempotency, user credential check и device limit в одной транзакции, отдельный device credential и per-device config/revision/ETag. HTTPS/IPC и reference caller проверены; native clients отдельно. [CLIENT_API.md](CLIENT_API.md).
 
 Предыдущий core milestone: [ENROLLMENT_PROGRESS.md](ENROLLMENT_PROGRESS.md); дальнейший HTTPS milestone описан отдельно выше.
-- [ ] Узкий VPN HTTPS allowlist с проверкой IP/domain TLS identity, client auth/throttling, bootstrap claim TTL/one-time consume и сохранением последней рабочей конфигурации.
-- [ ] Клиентский reference mock явно отделить от реальных Android/Windows; затем клиентская интеграция и настоящие devices.
+- [x] Узкий VPN HTTPS allowlist с проверкой IP TLS identity, client auth/throttling и сохранением последней рабочей конфигурации. Domain migration ещё впереди. [Проверки](INTERNAL_HTTPS.md).
+- [x] Контрактный reference caller явно отделён от реальных Android/Windows.
+- [ ] Bootstrap claim TTL/one-time consume и выдача профилей с admin re-auth.
+- [ ] Клиентская интеграция и настоящие Android/Windows devices.
 
 Ночное окно завершено. Разработка возобновлена новым поручением пользователя10.11.2026; старый cutoff не ограничивает это продолжение. Ночная автоматизация не возобновляется.

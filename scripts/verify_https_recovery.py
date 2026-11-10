@@ -19,6 +19,7 @@ from ftm.https_probe import trusted_certificate
 from ftm.installer import read_private_json
 from ftm.legacy import baseline_module
 from ftm.store import Store
+from ftm.internal_https import HOOK, rule, exists
 
 
 def verify(args):
@@ -46,6 +47,8 @@ def verify(args):
         with urllib.request.urlopen(url, timeout=10) as response:
             if "Сервис готовится".encode() not in response.read():
                 raise RuntimeError("Private restore exposed an API route")
+        if HOOK.exists() and exists(rule(agent)):
+            raise RuntimeError("Private restore retained the VPN HTTPS exception")
 
     with tempfile.TemporaryDirectory(prefix="ftm-https-recovery-", dir="/root") as folder:
         root = Path(folder)
@@ -76,6 +79,8 @@ def verify(args):
                 raise RuntimeError("Public recovery changed the saved identity")
             if read_private_json("/etc/ftm/https.json")["mode"] != "public":
                 raise RuntimeError("Public Caddy route was not regenerated")
+            if HOOK.exists() and not exists(rule(agent)):
+                raise RuntimeError("Public restore lost the VPN HTTPS exception")
             try:
                 urllib.request.urlopen(url, timeout=10)
             except urllib.error.HTTPError as error:
@@ -95,6 +100,7 @@ def verify(args):
     if _run(["systemctl", "show", "ssh", "-p", "MainPID", "--value"]) != ssh_pid:
         raise RuntimeError("Recovery restarted SSH")
     return {"result": "PASS", "private_restore_removes_public_api": True,
+            "internal_https_exception_follows_restored_mode": HOOK.exists(),
             "injected_public_restore_rolls_back_to_private": True, "public_https_config_regenerated": True,
             "complete_public_snapshot_restored": True, "trusted_tls_and_anonymous_401": True,
             "iphone_profile_and_ssh_pid_unchanged": True, "vpn_api_edge_restarted_for_maintenance": True}

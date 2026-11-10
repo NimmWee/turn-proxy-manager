@@ -1,8 +1,11 @@
 """Contract-only caller. No VPN adapter, traffic routing or native secure storage."""
 
 import hashlib
+import http.client
+import ipaddress
 import json
 import ssl
+import socket
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
@@ -22,8 +25,39 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class _InternalHTTPS(urllib.request.HTTPSHandler):
+    def __init__(self, origin, address):
+        super().__init__(context=ssl.create_default_context())
+        self.identity = urlsplit(origin).hostname
+        try:
+            ip = ipaddress.IPv4Address(address)
+        except (ValueError, TypeError):
+            raise ClientSyncError() from None
+        if not any(ip in ipaddress.ip_network(net) for net in ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16')):
+            raise ClientSyncError()
+        self.address = str(ip)
+
+    def https_open(self, request):
+        if urlsplit(request.full_url).hostname != self.identity:
+            raise ClientSyncError()
+
+        def connection(host, **kwargs):
+            result = http.client.HTTPSConnection(host, **kwargs)
+
+            def dial(destination, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None):
+                if destination != (self.identity, 443):
+                    raise ClientSyncError()
+                return socket.create_connection((self.address, 443), timeout, source_address)
+
+            # HTTPSConnection still wraps TLS using its original host identity.
+            result._create_connection = dial
+            return result
+
+        return self.do_open(connection, request, context=self._context)
+
+
 class ReferenceClient:
-    def __init__(self, origin, *, private_key, public_key, device_token, client_id):
+    def __init__(self, origin, *, private_key, public_key, device_token, client_id, internal_address=None):
         parsed = urlsplit(origin)
         if (parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.path
                 or parsed.query or parsed.fragment or parsed.port not in (None, 443) or _digest(device_token, "device") is None):
@@ -32,7 +66,8 @@ class ReferenceClient:
         self.token, self.client_id = device_token, client_id
         self.etag = self.last_good = self.last_share = None
         self.state = "UNCONFIGURED"
-        self.opener = urllib.request.build_opener(_NoRedirect(), urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+        transport = _InternalHTTPS(origin, internal_address) if internal_address is not None else urllib.request.HTTPSHandler(context=ssl.create_default_context())
+        self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect(), transport)
 
     def _request(self, operation, token, body=None, etag=None):
         headers = {"Authorization": "Bearer " + token, "Accept": "application/json"}

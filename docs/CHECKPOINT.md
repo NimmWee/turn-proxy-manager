@@ -24,6 +24,8 @@ Recovery phrase запрашивается скрытым вводом; она �
 
 Provisioned Caddy останавливается до смены auth, config пересобирается из проверенного web config и фиксированного host identity, затем проверяется TLS readiness. Private v1 restore закрывает публичный proxy, public v2 возвращает HTTPS route; обратный rollback проверен реально. Caddyfile из архива не принимается. [Результат](PUBLIC_HTTPS_PROGRESS.md).
 
+При установленном internal HTTPS hook recovery также синхронизирует только собственное VPN INPUT исключение TCP443: private закрывает, public возвращает. Реальный restore/rollback и network restart PASS. Это явно сообщается в result, прочие firewall rules/SSH не меняются. [Проверки](INTERNAL_HTTPS.md).
+
 - Шифрование использует тот же OpenSSL AES-256-CBC/PBKDF2, что закреплённый baseline, и отдельный версионированный контейнер `FTMCP1`. HMAC-SHA256 с отдельно выводимым ключом проверяется **до** расшифровки и разбора JSON/SQLite. Ограничены ciphertext и размеры отдельных разделов. Неверная phrase и изменение ciphertext отклоняются.
 - Только четыре фиксированных data-раздела и SQLite. Произвольные пути, unit-файлы, shell hooks, команды firewall и неожиданные SQL schema/trigger/view не принимаются. Схема SQLite сравнивается с доверенной миграцией; проверяются integrity/FK/version и отсутствие незавершённых операций.
 - Собственные peer/CID/PSK/IP/IPv6 сопоставляются с metadata и root registry. Отозванный device не должен оставаться в config/CID. Неизвестные peers сохраняются как data, их записи не присваиваются Manager автоматически.

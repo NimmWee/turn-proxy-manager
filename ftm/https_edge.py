@@ -45,6 +45,9 @@ def sync_config(state):
     saved, proposed = planned_config(state, read_private_json(DIRECTORY / "web.json", 16384))
     _atomic(DIRECTORY / "Caddyfile", proposed)
     _atomic(DIRECTORY / "https.json", json.dumps(saved))
+    from .internal_https import HOOK, load_agent, sync
+    if HOOK.exists():
+        sync(load_agent())
 
 
 def active(service):

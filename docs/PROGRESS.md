@@ -8,11 +8,13 @@
 
 **Разработка возобновлена новым поручением после ночного cutoff.** Client HTTPS API enroll/status/subscription уже установлен и реально проверен через restricted IPC к kernel WG. Per-device config без private key, pending/ETag304, revoke-before304 и bearer scope isolation PASS. Это серверный контракт с reference caller, не готовое Android/Windows приложение. [Протокол и проверки](CLIENT_API.md).
 
-**Начат этап4: lifecycle токенов.** Hash-only user/device credentials, rotation и отзыв, без возрождения старого credential при re-enable. Реальная проверка с WG/RPC/root CLI PASS, ключи и профиль сохранены. Это ещё не публичные подписки/enrollment. [Подробности](STAGE4_PROGRESS.md).
+**HTTPS внутри VPN проверен.** Узкое INPUT разрешение TCP443, проверка публичной TLS identity при внутреннем TCP адресе, настоящий WG namespace config/304 и запрет22/8080. Private/public restore и rollback синхронизируют исключение; network restart восстановил правильный порядок. Финальная offsite копия14 metadata/2 peers расшифрована в WSL; ключи/iPhone сохранены. [Подробности](INTERNAL_HTTPS.md). Следующий серверный блок — bootstrap/claim и admin re-auth/export.
+
+**Lifecycle токенов этапа4 проверен.** Hash-only user/device credentials, rotation и отзыв, без возрождения старого credential при re-enable. Реальная проверка с WG/RPC/root CLI PASS, ключи и профиль сохранены. [Подробности foundation](STAGE4_PROGRESS.md); HTTPS endpoints добавлены следующим блоком выше.
 
 Существующий share codec/JSON Schema проверен настоящим pinned Go parser на трёх synthetic profiles. Android source mapping/SHA проверены, runtime NOT RUN. [Контракт](PROFILE_CONTRACT.md). Реальный клиентский secure storage ещё не интегрирован; неизвестные managed поля нельзя добавлять в upstream share JSON.
 
-Атомарное enrollment core сохраняет WG private key/device token на стороне caller и принимает только public key/CID/hash. Concurrent retry/limit/collision/revoke PASS; на VPS periodic worker применил настоящий synthetic peer. Публичный enrollment API/config ещё впереди. [Границы проверки](ENROLLMENT_PROGRESS.md).
+Атомарное enrollment core сохраняет WG private key/device token на стороне caller и принимает только public key/CID/hash. Concurrent retry/limit/collision/revoke PASS; на VPS periodic worker применил настоящий synthetic peer. [Границы core проверки](ENROLLMENT_PROGRESS.md); публичный API/config добавлен отдельным блоком выше.
 
 **Русская панель доступна по доверенному HTTPS.** Caddy с Let’s Encrypt IP certificate, Secure cookie, фиксированный Origin/Host, rootless API через Unix IPC. В браузере проверены вход и создание/отключение пользователя. Реальные private/public restore и injected rollback сохраняют границу доступа; offsite копия проверена. [Результаты и ограничения](PUBLIC_HTTPS_PROGRESS.md).
 
@@ -50,7 +52,7 @@
 
 ## Проверки
 
-Последний полный локальный прогон:
+Последний полный локальный прогон —115 tests: Windows110PASS/5skips, WSL109PASS/6web dependency skips, baseline8 и binary smoke PASS. Ниже сохранена историческая матрица ранних этапов; результаты новых блоков находятся в документах выше.
 
 | Проверка | Результат |
 | --- | --- |
@@ -121,6 +123,6 @@ Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не
 
 ## Следующий конкретный шаг
 
-Managed startup, checkpoint, IPC, русская панель, IP HTTPS и client registration/subscriptions проверены. Следующий шаг — internal VPN HTTPS и bootstrap/claim этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [Client API](CLIENT_API.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
+Managed startup, checkpoint, IPC, русская панель, IP/internal HTTPS и client registration/subscriptions проверены. Следующий шаг — bootstrap/claim и admin re-auth/export этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [Client API](CLIENT_API.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
 
 Рабочий VPS по-прежнему не используется как тестовая среда. Новый тестовый VPS предоставлен пользователем отдельно; доступ и изменение его Fail2ban разрешены текущим поручением.
