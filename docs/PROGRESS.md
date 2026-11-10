@@ -6,6 +6,8 @@
 
 ## Текущий этап
 
+**Уточнение VK auth — только исследование.** Пользователь подтвердил импорт Android-профиля и сообщил о двух CAPTCHA; Android data-plane E2E этим сообщением не подтверждён. Изучены iOS auth и рабочие изменения `C:\VPNN`, решение добавлено в ТЗ§5.1/T28. Предложены Calls-first, bounded memory cache и согласованный manual fallback; причина двух окон пока гипотеза. Реализация по прямому указанию пользователя **не начата**, VPS/профили не менялись. [Исследование](VK_AUTH_RESEARCH.md).
+
 **Выдача из панели с повторным паролем работает.** Root re-auth, private short-lived delivery cache и durable request UUID исключают повторный peer/rotation при retry. Реальный API и браузерный download subscription/bootstrap проверены; временные подключения убраны. Финальный checkpoint17/2 проверен вне VPS. [Проверки и ограничения](ADMIN_EXPORT.md). Следующие блоки — native import/secure storage/Connection Manager, QR и реальные VK bootstrap/leak tests.
 
 **Персональный bootstrap/claim реализован и установлен.** Root-only private artifact, hash-only TTL nonce, claim только с собственного VPN IP, atomic consume/idempotent retry и переход к managed без замены WG keys/CID. Реальный namespace proof, public-origin XFF spoof отказ, cleanup и offsite копия PASS. Выдача из панели добавлена следующим блоком выше; native import ещё впереди. [Подробности](BOOTSTRAP.md).

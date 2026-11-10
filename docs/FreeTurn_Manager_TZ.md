@@ -162,6 +162,17 @@ API под `/api/client/v1/` и `/api/admin/v1/` (внутренние пути 
 
 **Интернет/blocked-IP:** метод получения по внутреннему адресу VPS должен работать даже при недоступности внешнего `443` из РФ, если TURN-подключение уже установлено. Выдача нового устройства одним только токеном без первого транспорта тогда невозможна: bootstrap обязательно предусмотреть и протестировать.
 
+### 5.1. VK Calls без лишних CAPTCHA — уточнение 10.11.2026
+
+Пользователь сообщил: Android-профиль импортируется, но запрашивает CAPTCHA дважды. Требуется перенести в будущие Android/Windows клиенты подход из `anton48/vk-turn-proxy-ios` и локального `C:\VPNN`: новый anonymous VK Calls auth path первым, legacy/manual CAPTCHA только резервным путём. Сейчас разрешены **только исследование и запись решения**, не реализация/сборка/деплой этого изменения. Детали, исходники, SHA256 и границы доказательств: [VK_AUTH_RESEARCH.md](VK_AUTH_RESEARCH.md).
+
+- В общем Go provider: `auth.getAnonymToken` → `messages.getCallPreview` → `messages.getAnonymCallToken` на `api.vk.me`, затем OK Calls session/join и TURN credentials; сохранить проверку TLS, bounded HTTP/timeouts, socket protection и существующий wire protocol. Метод/app/API identifiers перепроверять по pinned source при реализации, не считать вечным внешним контрактом.
+- При успешной штатной Calls авторизации ручная CAPTCHA не вызывается; личный VK account/cookies администратора не нужны. Это не обещание обхода любой проверки VK. Если сервис требует CAPTCHA, сохранить согласованный ручной fallback и понятное состояние клиента; автоматический solver не является требованием этой доработки.
+- Ограниченный изолированный memory cache действующих credentials между reconnect/сменами режима; TTL из ответа/проверенного формата username с запасом, безопасный fallback TTL и invalidation. Cache не должен смешивать devices/calls/accounts, переживать отзыв или нарушать allocation quota. Параметры VPNN — исходная точка исследования, не неподтверждённая гарантия времени жизни.
+- Один владелец auth attempt и challenge; deduplicate fetch в группе и UI одного challenge, сохранить результат ручного ввода и legacy session при retry, поддержать cancel/backoff. Terminal invalid link/call full/anonymous blocked/rate limit не должны запускать перебор identities или CAPTCHA-шторм. Background не открывает интерактивный WebView самовольно.
+- `n=6/spc=3` предполагает две credential groups и может объяснять два запроса, но причину конкретного APK ещё надо подтвердить. Не маскировать проблему отключением `mcap`, слепым повышением spc/снижением n или переносом TCP bond из VPNN. WG keys/CID/PSK/iPhone profile/server baseline не менять ради auth-доработки; секреты/challenge URLs не выводить в logs/API/Git.
+- Приёмка T28: реальные Android/Windows VK подключения, fresh auth без лишних окон при доступном Calls path, отсутствие повторного ввода одного challenge, cache/reconnect/TTL/изоляция, ручной fallback/cancel/terminal errors. До этих проверок статус **NOT IMPLEMENTED / NOT RUN**. Полное покрытие автотестами не требуется: только критические credential/concurrency/security случаи, остальное сборкой и реальным сценарием.
+
 ## 6. Connection Manager: Direct ↔ VK Relay
 
 **Семантика:** сохраняется тот же WG/AWG peer, тот же CID и VPN-IP; меняется только транспорт FreeTurn к серверу. Не путать переключение транспорта с заменой криптопротокола WireGuard на TURN.
@@ -396,6 +407,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/NimmWee/Vps/main/install.sh)
 | T25 | Wizard: некорректный DNS/закрытый 80/443 | Понятная ошибка, retry/switch/cancel, старый VPN и SSH сохранены; false success нет |
 | T26 | Reconfigure IP ↔ domain через `ftm config web` | Нет потери пользователей, ключей и VPN; предупреждение о смене URL и безопасная миграция подписок |
 | T27 | `--non-interactive --config` на тестовой чистой VM | Воспроизводимая установка/repair, секреты не попадают в аргументы/логи, проверены повторный запуск и rollback |
+| T28 | Android/Windows VK auth и повторные CAPTCHA | Calls path первым; cache и согласованный fallback без дублей одного challenge, корректные TTL/изоляция/cancel/backoff; реальный VK VPN-трафик. На10.11.2026 только исследование, реализация не начата |
 
 ## 17. Что вне проекта
 
