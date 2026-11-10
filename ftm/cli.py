@@ -46,6 +46,8 @@ def main(argv=None):
     inspect = commands.add_parser("inspect", help="Проверить state Vps без раскрытия ключей")
     inspect.add_argument("--state", type=Path, required=True)
     commands.add_parser("preflight", help="Прочитать ОС, ресурсы и занятые порты без изменения хоста")
+    commands.add_parser("status", help="Текущее состояние установленного VPN через ограниченный IPC")
+    commands.add_parser("doctor", help="Проверить службы, права, loopback и TLS без изменения сервера")
     security = commands.add_parser("secure-ssh", help="Настроить Fail2ban: бан на 365 дней после 3 ошибок")
     security.add_argument("--apply", action="store_true", help="Явно применить защиту SSH (root/Linux)")
     for command in ("backup", "restore"):
@@ -55,6 +57,19 @@ def main(argv=None):
         checkpoint.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
     try:
+        if args.command in ("status", "doctor"):
+            import os
+            if os.name != "posix":
+                print("Эта команда проверяет установленный Linux-сервер; запустите её на VPS.", file=sys.stderr)
+                return 2
+            from . import diagnostics
+            try:
+                report = diagnostics.status() if args.command == "status" else diagnostics.doctor()
+            except (OSError, RuntimeError, ValueError):
+                print("Диагностика недоступна. Проверьте права root и службу ftm-control; сервер не изменён.", file=sys.stderr)
+                return 2
+            print(json.dumps(report, ensure_ascii=False, indent=2))
+            return 0 if report.get("consistent", report.get("healthy", False)) else 2
         if args.command in ("backup", "restore"):
             from .checkpoint import safe_main
             flags = (["--dry-run"] if args.dry_run else []) + (["--apply"] if args.apply else [])

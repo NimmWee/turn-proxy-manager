@@ -14,6 +14,8 @@
 
 Добавлен read-only «Журнал» с реальными audit events, RU action names, поиском и мобильным layout. Auth401/200, bounded allowlisted IPC/API и браузерный сценарий PASS; новых UI автотестов не добавлено. [Проверки](EVENTS_PROGRESS.md).
 
+`ftm status`/`ftm doctor` доступны на установленном стенде и реально проверены без изменений сервера. [Команды](OPERATIONS.md).
+
 **Фоновый reconciler установлен.** Durable pending/applying add/revoke, отмена устаревшей операции и lock contention проверены на WG без VPN/SSH restart; профили сохранены. [Проверки](HTTPS_RECONCILE_PROGRESS.md). История private UI: [STAGE3_PROGRESS.md](STAGE3_PROGRESS.md). Выдача новых клиентских профилей, подписки и полный installer ещё не готовы.
 
 
