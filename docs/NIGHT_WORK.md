@@ -53,3 +53,9 @@ Runtime b41b929edcd1f2c4. Checkpoint `/root/ftm-managed-289a6f6872.vpnbackup`, S
 Stage4 hash-only lifecycle реализован и реально проверен с временным WG peer/RPC/root CLI; `STAGE4_PROGRESS.md`. Root SQLite права не менялись, iPhone профиль и четыре service PID сохранены. Тестовый peer отозван; активных исходных2. Публичных client routes/секретных IPC пока нет.
 
 Runtime486619c38bbddd4c. Новая offsite копия `/root/ftm-managed-d8c6d0fb43.vpnbackup`, SHA2569b9b35a07d80fabbca16741d286d1ee770f30baeb7d4add88f4e1a0182d66a90; local private `manager-credentials.vpnbackup`, decode/stage PASS(9metadata/2peers/public web config). Следующий доступный блок — pinned Go/Android parsers и совместимый profile contract; refs core21dca376... и androidbe516f112... HEAD совпадают с lock. Go на рабочем ПК1.26.2 windows/386, kotlinc пока отсутствует; компиляцию на VPS не выполнять.
+
+## Обновление 07:49 Томск: wire contract
+
+Codec/schema и source pins готовы. Три synthetic профиля прошли actual pinned Go Parse/String и обратно Python, без key/CID/VK/obf изменений; Android source verified, runtime NOT RUN. `PROFILE_CONTRACT.md`. Windows102 tests97PASS/5skips, WSL102 tests99PASS/3web skips. Два новых codec cases — только round-trip/unsafe-input boundary. RootCLI parent-directory fsync проверен без peer changes.
+
+Runtime41768b222d0f96cc. Последний offsite `/root/ftm-managed-bde749470a.vpnbackup`, SHA256af42934ae523012aae80513234ec46c905c444b6b12b567c47b8d7842d4e4f0f; private `manager-profile-contract.vpnbackup` decode/stage PASS(9metadata/2peers). В закрытом Downloads есть human-readable `Панель.txt`; URL/password не печатать. User-token/device credential foundation и codec не являются client subscription/enrollment: следующие этапы требуют отдельного envelope, atomic enrollment/idempotency/credential delivery и внутреннего HTTPS/bootstrap. До cutoff осталось около30мин; начать только законченный доступный блок, не оставлять live server в промежуточном режиме.

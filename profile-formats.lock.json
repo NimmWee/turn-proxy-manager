@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "core": {
+    "commit": "21dca376ca26d2b6d0e2d84d107b9314b5041146",
+    "path": "internal/uri/uri.go",
+    "sha256": "322617a14f2fbe85a6dd89e2afa9d357aaf47981ac0db0548135a6162ae26189"
+  },
+  "android": {
+    "commit": "be516f1122ac38523203dbffde8603a8b3e755fc",
+    "path": "app/src/main/java/com/freeturn/app/data/share/FreeturnLink.kt",
+    "sha256": "c30781cc7201c87123ffebff5170eb86bf681bb2001410664b8974f623242913"
+  }
+}

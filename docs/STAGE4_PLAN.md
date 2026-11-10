@@ -15,7 +15,7 @@
 
 ## Следующие блоки
 
-- [ ] Проверить pinned Android/Go profile parsers, JSON Schema и round-trip настоящих форматов. Не выдумывать freeturn URL flags.
+- [x] Проверить pinned Android/Go profile parsers, JSON Schema и round-trip настоящего Go parser. Android runtime NOT RUN; source mapping/SHA проверены. Не выдумывать freeturn URL flags. [Контракт](PROFILE_CONTRACT.md).
 - [ ] Enrollment: on-device key, idempotency, user credential check и device limit в одной транзакции, отдельный device credential и per-device config/revision/ETag.
 - [ ] Узкий VPN HTTPS allowlist с проверкой IP/domain TLS identity, client auth/throttling, bootstrap claim TTL/one-time consume и сохранением последней рабочей конфигурации.
 - [ ] Клиентский reference mock явно отделить от реальных Android/Windows; затем клиентская интеграция и настоящие devices.

@@ -6,6 +6,8 @@
 
 **Начат этап4: lifecycle токенов.** Hash-only user/device credentials, rotation и отзыв, без возрождения старого credential при re-enable. Реальная проверка с WG/RPC/root CLI PASS, ключи и профиль сохранены. Это ещё не публичные подписки/enrollment. [Подробности](STAGE4_PROGRESS.md).
 
+Существующий share codec/JSON Schema проверен настоящим pinned Go parser на трёх synthetic profiles. Android source mapping/SHA проверены, runtime NOT RUN. [Контракт](PROFILE_CONTRACT.md). Клиентские private keys в нормальном enrollment ещё предстоит оставить на клиенте; неизвестные managed поля нельзя добавлять в upstream share JSON.
+
 **Русская панель доступна по доверенному HTTPS.** Caddy с Let’s Encrypt IP certificate, Secure cookie, фиксированный Origin/Host, rootless API через Unix IPC. В браузере проверены вход и создание/отключение пользователя. Реальные private/public restore и injected rollback сохраняют границу доступа; offsite копия проверена. [Результаты и ограничения](PUBLIC_HTTPS_PROGRESS.md).
 
 **Фоновый reconciler установлен.** Durable pending/applying add/revoke, отмена устаревшей операции и lock contention проверены на WG без VPN/SSH restart; профили сохранены. [Проверки](HTTPS_RECONCILE_PROGRESS.md). История private UI: [STAGE3_PROGRESS.md](STAGE3_PROGRESS.md). Выдача новых клиентских профилей, подписки и полный installer ещё не готовы.

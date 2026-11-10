@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FreeTurn v1 share payload supported by FTM",
+  "$comment": "Syntax contract only. Encoded JSON is limited to 65536 UTF-8 bytes. Not a managed subscription or runtime-config validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "provider",
+    "peer"
+  ],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "maxLength": 49152,
+      "minLength": 1
+    },
+    "peer": {
+      "type": "string",
+      "maxLength": 49152,
+      "minLength": 1
+    },
+    "transport": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "mode": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "obf": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "key": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "cid": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "listen": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "dns": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "dnss": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "vk": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "wg": {
+      "type": "string",
+      "maxLength": 49152
+    },
+    "v": {
+      "type": "integer",
+      "const": 1
+    },
+    "timing": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "n": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "spc": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "bond": {
+      "type": "boolean"
+    },
+    "mcap": {
+      "type": "boolean"
+    },
+    "kcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodelay",
+        "interval",
+        "resend",
+        "nc",
+        "sndwnd",
+        "rcvwnd",
+        "mtu",
+        "acknodelay"
+      ],
+      "properties": {
+        "nodelay": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "interval": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "resend": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "nc": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "sndwnd": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "rcvwnd": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "mtu": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "acknodelay": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

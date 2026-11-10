@@ -140,6 +140,11 @@ def main():
                         output.write(json.dumps(value))
                         output.flush()
                         os.fsync(output.fileno())
+                        parent_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+                        try:
+                            os.fsync(parent_fd)
+                        finally:
+                            os.close(parent_fd)
                     operation(args.id, deliver=deliver)
             except BaseException:
                 args.output.unlink(missing_ok=True)

@@ -40,10 +40,11 @@ def install(checkpoint, offsite_sha256):
         raise ValidationError("Take a fresh checkpoint before changing the runtime")
     files = [p.relative_to(source) for p in (source / "ftm").glob("*.py")]
     files += [Path("ftm/migrations/001_initial.sql"), Path("scripts/verify_baseline.py"), Path("upstreams.lock.json")]
-    if (source / "requirements.lock").is_file():
-        files.append(Path("requirements.lock"))
-    if (source / "caddy.lock.json").is_file():
-        files.append(Path("caddy.lock.json"))
+    for name in ("requirements.lock", "caddy.lock.json", "profile-formats.lock.json"):
+        if (source / name).is_file():
+            files.append(Path(name))
+    if (source / "schemas").is_dir():
+        files += [path.relative_to(source) for path in (source / "schemas").glob("*.schema.json") if path.is_file()]
     if (source / "web/dist").is_dir():
         files += [path.relative_to(source) for path in (source / "web/dist").rglob("*") if path.is_file()]
     lock = json.loads((source / "upstreams.lock.json").read_text())
