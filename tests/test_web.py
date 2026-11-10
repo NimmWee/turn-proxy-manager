@@ -47,3 +47,22 @@ class WebBoundaryTests(unittest.TestCase):
             self.assertEqual(response.status_code, 413)
             self.assertEqual(client.get("/docs").status_code, 404)
             self.assertEqual(client.get("/openapi.json").status_code, 404)
+
+    def test_public_https_cookie_origin_and_host_boundary(self):
+        config = dict(self.config, version=2, public_origin="https://8.8.8.8", secure_cookie=True)
+        app = create_app(config, rpc=lambda *args: [])
+        base = "/a/" + config["panel_slug"] + "/api"
+        payload = {"username": "admin", "password": "synthetic web admin phrase"}
+        with TestClient(app, base_url="http://localhost") as internal:
+            self.assertEqual(internal.post(base + "/auth/login", json=payload, headers={"Origin": config["public_origin"]}).status_code, 403)
+        with TestClient(app, base_url="https://8.8.8.8") as client:
+            self.assertEqual(client.post(base + "/auth/login", json=payload, headers={"Origin": "http://8.8.8.8"}).status_code, 403)
+            login = client.post(base + "/auth/login", json=payload, headers={"Origin": config["public_origin"]})
+            self.assertEqual(login.status_code, 200)
+            self.assertIn("Secure", login.headers["set-cookie"])
+            self.assertEqual(client.get(base + "/users").status_code, 200)
+            csrf = login.json()["csrf"]
+            self.assertEqual(client.post(base + "/users", json={"name": "Family"}, headers={"Origin": "http://8.8.8.8", "X-CSRF-Token": csrf}).status_code, 403)
+            self.assertEqual(client.get(base + "/users", headers={"Host": "untrusted.example"}).status_code, 400)
+            self.assertEqual(client.post(base + "/auth/logout", headers={"Origin": config["public_origin"], "X-CSRF-Token": csrf}).status_code, 200)
+            self.assertEqual(client.get(base + "/users").status_code, 401)

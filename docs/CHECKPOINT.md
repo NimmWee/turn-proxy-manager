@@ -1,6 +1,6 @@
 # Зашифрованная копия managed VPN
 
-Текущий формат объединяет root-owned SQLite (через SQLite Backup API), baseline state с ключами и выданными профилями, persistent WireGuard config, CID config и root ownership registry. **Версия 2** добавляет root web config: password hash, имя администратора и секретный путь панели. Сессии не сохраняются; после restore нужен новый login. Caddy, домен и сертификаты пока отсутствуют — при их появлении копию потребуется расширить. Это ещё не финальный installer/restore всего проекта.
+Текущий формат объединяет root-owned SQLite (через SQLite Backup API), baseline state с ключами и выданными профилями, persistent WireGuard config, CID config и root ownership registry. **Версия 2** добавляет root web config: password hash, имя администратора, секретный путь и HTTPS origin/Secure cookie при public mode. Сессии не сохраняются; после restore нужен новый login. На provisioned HTTPS host Caddy route регенерируется доверенным кодом из этих данных. ACME account/cache и certificate key пока не архивируются; clean-host installer/restore ещё впереди.
 
 Команды после установки runtime:
 
@@ -21,6 +21,8 @@ Recovery phrase запрашивается скрытым вводом; она �
 Пустой/повреждённый хост, миграция на другой IP и восстановление сертификатов — будущая работа installer. Этот промежуточный режим не выдаётся за T19 на чистом VPS. До миграции или reboot требуется проверенная offsite-копия и доступное восстановление.
 
 ## Защита и согласованность
+
+Provisioned Caddy останавливается до смены auth, config пересобирается из проверенного web config и фиксированного host identity, затем проверяется TLS readiness. Private v1 restore закрывает публичный proxy, public v2 возвращает HTTPS route; обратный rollback проверен реально. Caddyfile из архива не принимается. [Результат](PUBLIC_HTTPS_PROGRESS.md).
 
 - Шифрование использует тот же OpenSSL AES-256-CBC/PBKDF2, что закреплённый baseline, и отдельный версионированный контейнер `FTMCP1`. HMAC-SHA256 с отдельно выводимым ключом проверяется **до** расшифровки и разбора JSON/SQLite. Ограничены ciphertext и размеры отдельных разделов. Неверная phrase и изменение ciphertext отклоняются.
 - Только четыре фиксированных data-раздела и SQLite. Произвольные пути, unit-файлы, shell hooks, команды firewall и неожиданные SQL schema/trigger/view не принимаются. Схема SQLite сравнивается с доверенной миграцией; проверяются integrity/FK/version и отсутствие незавершённых операций.

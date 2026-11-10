@@ -150,7 +150,9 @@ def stage(snapshot, destination):
     state = validate_legacy_state(_json(files["state.json"]))
     if "web.json" in files:
         from .web_auth import validate_config
-        validate_config(_json(files["web.json"]))
+        web = validate_config(_json(files["web.json"]))
+        if web.get("public_origin") and web["public_origin"] != "https://" + state["endpoint"]:
+            raise ValidationError("Checkpoint public HTTPS origin differs from its host")
     if state["instance"] != "main":
         raise ValidationError("Only the managed main instance is supported")
     peers = _wg_peers(files["wireguard.conf"], state)
@@ -254,6 +256,11 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
     includes_web = (staged / "web.json").is_file()
     if includes_web != WEB_CONFIG.is_file():
         raise ValidationError("Same-host restore must include the currently provisioned web settings")
+    edge_path = Path("/etc/ftm/https.json")
+    includes_edge = includes_web and (edge_path.exists() or edge_path.is_symlink())
+    if includes_edge:
+        from .https_edge import planned_config
+        planned_config(agent.baseline, read_private_json(staged / "web.json", 16384))
     # Revalidate even when called independently of the CLI.
     with tempfile.TemporaryDirectory(prefix="ftm-restore-") as temporary:
         root = Path(temporary)
@@ -265,9 +272,15 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
         previous = capture_live(store, agent)
         stage(previous, root / "rollback")
         api_was_active = False
+        caddy_was_active = False
         if includes_web:
             try:
                 api_was_active = runner(["systemctl", "is-active", "ftm-api"]).strip() == "active"
+            except RuntimeError:
+                pass
+        if includes_edge:
+            try:
+                caddy_was_active = runner(["systemctl", "is-active", "ftm-caddy"]).strip() == "active"
             except RuntimeError:
                 pass
 
@@ -278,6 +291,9 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
             _atomic(agent.registry, (source / "managed.json").read_bytes())
             if includes_web:
                 _atomic(WEB_CONFIG, (source / "web.json").read_bytes())
+            if includes_edge:
+                from .https_edge import sync_config
+                sync_config(agent.baseline)
             _restore_database(source / "metadata.sqlite3", store.path)
             runner(["wg", "syncconf", agent.interface, str(agent.config / "wireguard.conf")])
 
@@ -301,8 +317,15 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
                         if attempt == 19:
                             raise RuntimeError("API recovery health check failed") from None
                         time.sleep(0.2)
+            if caddy_was_active:
+                runner(["systemctl", "reset-failed", "ftm-caddy"])
+                runner(["systemctl", "start", "ftm-caddy"])
+                from .https_edge import wait_ready
+                wait_ready(agent.baseline["endpoint"], tls=True)
 
         try:
+            if caddy_was_active:
+                runner(["systemctl", "stop", "ftm-caddy"])
             if api_was_active:
                 runner(["systemctl", "stop", "ftm-api"])
             runner(["systemctl", "stop", "vps-vk"])
@@ -315,13 +338,18 @@ def restore_same_host(staged, store, agent, *, runner=_run, after_write=None):
                 raise RuntimeError("Restored VPN health check failed")
         except BaseException:
             try:
+                if caddy_was_active:
+                    runner(["systemctl", "stop", "ftm-caddy"])
+                if api_was_active:
+                    runner(["systemctl", "stop", "ftm-api"])
                 write(root / "rollback")
                 start_vpn()
             except BaseException:
                 raise RuntimeError("Restore failed and recovery needs root attention") from None
             raise RuntimeError("Restore failed; previous checkpoint recovered") from None
     return {"restored": True, "same_host_only": True, "ssh_and_firewall_changed": False,
-            "web_settings_restored": includes_web, "api_sessions_reset": api_was_active}
+            "web_settings_restored": includes_web, "api_sessions_reset": api_was_active,
+            "https_config_regenerated": includes_edge}
 
 
 def _read_encrypted(path):

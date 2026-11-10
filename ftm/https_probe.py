@@ -24,9 +24,16 @@ ROOT = Path(__file__).resolve().parents[1]
 TLS_WAIT_SECONDS = 150
 
 
-def config(host):
+def config(host, *, panel_slug=None):
     if not ipaddress.ip_address(host).is_global or ipaddress.ip_address(host).version != 4:
         raise ValidationError("Trusted IP TLS requires a public IPv4")
+    if panel_slug is not None and (not isinstance(panel_slug, str) or not re.fullmatch(r"[a-f0-9]{32}", panel_slug)):
+        raise ValidationError("Invalid panel route")
+    panel = "" if panel_slug is None else """    @panel path /a/SLUG /a/SLUG/*
+    handle @panel {
+        reverse_proxy 127.0.0.1:8080
+    }
+""".replace("SLUG", panel_slug)
     return """{
     admin off
     persist_config off
@@ -48,10 +55,13 @@ https://HOST {
             profile shortlived
         }
     }
-    header Content-Type "text/plain; charset=utf-8"
-    respond "Личная страница. Сервис готовится к запуску." 200
+    header -Server
+PANEL    handle {
+        header Content-Type "text/plain; charset=utf-8"
+        respond "Личная страница. Сервис готовится к запуску." 200
+    }
 }
-""".replace("HOST", host)
+""".replace("HOST", host).replace("PANEL", panel)
 
 
 def trusted_certificate(host):
@@ -83,7 +93,7 @@ def ensure_firewall():
     state = read_private_json("/var/lib/vps-vk/main/state.json", 1048576)
     NetworkAgent(state, config_dir="/etc/vps-vk/main", state_dir="/var/lib/ftm-agent")
     saved = read_private_json("/etc/ftm/https.json")
-    if saved.get("mode") != "probe" or saved.get("host") != state["endpoint"]:
+    if saved.get("mode") not in ("probe", "public") or saved.get("host") != state["endpoint"]:
         raise ValidationError("HTTPS probe identity must match the existing VPN")
     for rule in firewall_rules(state):
         if not rule_exists(rule):

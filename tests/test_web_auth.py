@@ -1,6 +1,6 @@
 import unittest
 
-from ftm.web_auth import Auth, make_config, InvalidCredentials, RateLimited, SESSION_TTL
+from ftm.web_auth import Auth, make_config, validate_config, InvalidCredentials, RateLimited, SESSION_TTL
 
 
 class WebAuthSafetyTests(unittest.TestCase):
@@ -30,3 +30,12 @@ class WebAuthSafetyTests(unittest.TestCase):
                 auth.login("admin", "incorrect phrase", "local")
         with self.assertRaises(RateLimited):
             auth.login("admin", "synthetic long admin phrase", "local")
+
+    def test_public_config_requires_canonical_https_and_secure_cookie(self):
+        config = dict(self.config, version=2, public_origin="https://8.8.8.8", secure_cookie=True)
+        self.assertEqual(validate_config(config), config)
+        for changes in ({"secure_cookie": False}, {"public_origin": "http://8.8.8.8"},
+                        {"public_origin": "https://8.8.8.8/a/path"}, {"public_origin": "https://127.0.0.1"},
+                        {"public_origin": "https://8.8.8.8\nrespond unsafe"}):
+            with self.assertRaises(ValueError):
+                validate_config(dict(config, **changes))

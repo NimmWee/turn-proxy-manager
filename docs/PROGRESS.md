@@ -4,9 +4,9 @@
 
 ## Текущий этап
 
-**Доверенный IP TLS и фоновый reconciler проверены.** Caddy получил настоящий Let’s Encrypt certificate; внешний HTTPS client PASS. Публично пока только заглушка, панель остаётся private. Durable pending/applying add/revoke и lock contention проверены на WG без VPN/SSH restart; исходные профили сохранены. [Результаты и ограничения](HTTPS_RECONCILE_PROGRESS.md).
+**Русская панель доступна по доверенному HTTPS.** Caddy с Let’s Encrypt IP certificate, Secure cookie, фиксированный Origin/Host, rootless API через Unix IPC. В браузере проверены вход и создание/отключение пользователя. Реальные private/public restore и injected rollback сохраняют границу доступа; offsite копия проверена. [Результаты и ограничения](PUBLIC_HTTPS_PROGRESS.md).
 
-**Private API и русская панель уже проверены на тестовом VPS.** Rootless FastAPI через ограниченный Unix IPC, действующий login/CSRF/logout, users/devices и настоящие метрики. UI проверен desktop/mobile/light/dark через SSH forwarding к серверу. После synthetic CRUD ключи/config/profile и VPN/SSH PID совпали. Checkpoint v2 включает web settings, offsite decode и реальные restore/rollback с изменением web identity PASS. Публичный Caddy/TLS, выдача новых клиентских профилей, подписки и full installer ещё не готовы. [Результат](STAGE3_PROGRESS.md).
+**Фоновый reconciler установлен.** Durable pending/applying add/revoke, отмена устаревшей операции и lock contention проверены на WG без VPN/SSH restart; профили сохранены. [Проверки](HTTPS_RECONCILE_PROGRESS.md). История private UI: [STAGE3_PROGRESS.md](STAGE3_PROGRESS.md). Выдача новых клиентских профилей, подписки и полный installer ещё не готовы.
 
 
 **Managed startup и recovery проверены на тестовом VPS.** Установлены root-owned `/opt/ftm` runtime, совместимый `vps-vk` и systemd startup hook. Общий encrypted checkpoint скачан и реально проверен в WSL; same-host restore и injected rollback PASS. Pending revoke/enable пережили настоящий restart сети. После фактического reboot VPN стартовал автоматически; ключи, профили, registry и metadata совпали. SSH, годовой Fail2ban и scoped firewall проверены. Phone E2E после reboot NOT RUN. IPC и первая private панель уже выполнены; далее trusted TLS и этап 4. Подробнее: [CHECKPOINT.md](CHECKPOINT.md), [IPC_PLAN.md](IPC_PLAN.md).
@@ -93,9 +93,10 @@ Read-only preflight на WSL корректно возвращает код 2: �
 | Android ↔ сервер 4.1.2-vps1; Anton48 через VK TURN | iPhone PASS пользователем и на сервере; Android NOT RUN для этой установки |
 | Активный CID hot reload и отзыв уже открытой сессии | SOURCE ONLY — polling 10 с подтверждён в pinned source; поведение трафика не проверено |
 | WireGuard data plane, Direct/Relay E2E, DNS/IPv6 leaks | iPhone VK data plane PASS. Direct/Auto, DNS/IPv6 leaks, новые devices и три одновременных клиента NOT RUN |
-| Бэкап и восстановление | Offsite ciphertext и same-host restore при отсутствующем state PASS; injected rollback PASS. Второй чистый хост и полный reboot NOT RUN |
+| Бэкап и восстановление | Managed/web v2 offsite decode и same-host restore/rollback PASS; настоящий reboot PASS. Чистый хост и ACME cache recovery NOT RUN |
 | Полная Android/Windows сборка, arm64 execution, Go rebuild | NOT RUN; Desktop checkout больших binary blobs не завершился из-за сети, текстовые исходники изучены отдельно |
-| Trusted TLS/domain/IP, Caddy, API/React, подписки, автофейловер, Windows driver/service | NOT IMPLEMENTED — последующие этапы |
+| Trusted TLS/IP, Caddy, API/React | PASS на тестовом VPS; domain migration NOT RUN. Не все вкладки MVP завершены |
+| Подписки, автофейловер, Windows driver/service | NOT IMPLEMENTED — последующие этапы |
 | GitHub CI и публикация | NOT RUN — изменения локальные, push не выполнялся |
 
 ## Совместимость и откат
@@ -106,6 +107,6 @@ Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не
 
 ## Следующий конкретный шаг
 
-Managed startup, dynamic CLI, encrypted checkpoint и same-host reboot/restore проверены. Следующий шаг — ограниченный IPC/права перед FastAPI и русской панелью. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [План](STAGE2_PLAN.md), [результаты](STAGE2_PROGRESS.md).
+Managed startup, checkpoint, IPC, русская панель и IP HTTPS проверены. Следующий шаг — registration/subscriptions/bootstrap этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [HTTPS](PUBLIC_HTTPS_PROGRESS.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
 
 Рабочий VPS по-прежнему не используется как тестовая среда. Новый тестовый VPS предоставлен пользователем отдельно; доступ и изменение его Fail2ban разрешены текущим поручением.

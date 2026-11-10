@@ -1,6 +1,7 @@
 """Bounded admin sessions; root-owned credential config, no metadata DB access."""
 
 import hashlib
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -40,8 +41,20 @@ def make_config(username, password):
 
 def validate_config(value):
     fields = {"version", "panel_slug", "username", "password_salt", "password_hash", "secure_cookie"}
-    if not isinstance(value, dict) or set(value) != fields or type(value["version"]) is not int or value["version"] != 1:
+    if not isinstance(value, dict):
         raise ValidationError("Unsupported web credential config")
+    public = value.get("version") == 2
+    if (set(value) != (fields | {"public_origin"} if public else fields)
+            or type(value["version"]) is not int or value["version"] not in (1, 2)):
+        raise ValidationError("Unsupported web credential config")
+    if public:
+        origin = value["public_origin"]
+        try:
+            host = ipaddress.IPv4Address(origin.removeprefix("https://")) if isinstance(origin, str) else None
+        except ipaddress.AddressValueError:
+            host = None
+        if host is None or not host.is_global or origin != "https://" + str(host) or value["secure_cookie"] is not True:
+            raise ValidationError("Public panel requires a canonical public IPv4 HTTPS origin and Secure cookie")
     for field, size in (("panel_slug", 32), ("password_salt", 32), ("password_hash", 64)):
         if not isinstance(value[field], str) or not re.fullmatch("[a-f0-9]{" + str(size) + "}", value[field]):
             raise ValidationError("Invalid web credential encoding")

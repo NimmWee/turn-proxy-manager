@@ -88,7 +88,9 @@ def create_app(config, *, rpc=control.request, static_dir=None):
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.state.auth = auth
     app.add_middleware(BodyLimit)
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
+    public_origin = auth.config.get("public_origin")
+    hosts = ["localhost", "127.0.0.1"] + ([public_origin.removeprefix("https://")] if public_origin else [])
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
     rpc_limit = asyncio.Semaphore(4)
 
     @app.middleware("http")
@@ -116,8 +118,8 @@ def create_app(config, *, rpc=control.request, static_dir=None):
         return found
 
     def origin(request: Request):
-        expected = str(request.base_url).rstrip("/")
-        if request.headers.get("origin") != expected:
+        expected = public_origin or str(request.base_url).rstrip("/")
+        if request.headers.get("origin") != expected or (public_origin and request.url.scheme != "https"):
             raise HTTPException(403, "Источник запроса не подтверждён")
 
     def mutation(request: Request, found=Depends(session)):
@@ -220,7 +222,7 @@ def main():
     args = parser.parse_args()
     import uvicorn
     uvicorn.run(create_app(load_config(args.config), static_dir=args.static_dir), host="127.0.0.1", port=args.port,
-                proxy_headers=False, server_header=False, access_log=False, workers=1, limit_concurrency=16,
+                proxy_headers=True, forwarded_allow_ips="127.0.0.1", server_header=False, access_log=False, workers=1, limit_concurrency=16,
                 backlog=32, timeout_keep_alive=5)
 
 
