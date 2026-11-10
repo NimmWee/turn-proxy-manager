@@ -79,6 +79,19 @@ class ClientService:
         if device["state"] != "active":
             return self._status(device)
         spec = self._spec(device)
+        manifest = self.manifest(device, spec)
+        raw = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+        etag = '"' + hashlib.sha256(raw).hexdigest() + '"'
+        match = False
+        if isinstance(if_none_match, str) and len(if_none_match) <= 512:
+            match = any(value.strip().removeprefix("W/") in (etag, "*") for value in if_none_match.split(",")[:16])
+        return {"ready": True, "etag": etag, "not_modified": match, **({} if match else {"config": manifest})}
+
+    def manifest(self, device, spec):
+        """Trusted root builder, also used for offline bootstrap issuance.
+
+        Public subscription must authenticate and verify active registry first.
+        """
         baseline = self.agent.baseline
         host = baseline["endpoint"]
         manifest = {"schema_version": 1, "format": "ftm-managed", "device_id": device["id"],
@@ -95,9 +108,4 @@ class ClientService:
                                    "tls_server_name": host, "refresh_seconds": 1800}}
         from .managed_profile import validate_manifest
         validate_manifest(manifest)
-        raw = json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
-        etag = '"' + hashlib.sha256(raw).hexdigest() + '"'
-        match = False
-        if isinstance(if_none_match, str) and len(if_none_match) <= 512:
-            match = any(value.strip().removeprefix("W/") in (etag, "*") for value in if_none_match.split(",")[:16])
-        return {"ready": True, "etag": etag, "not_modified": match, **({} if match else {"config": manifest})}
+        return manifest

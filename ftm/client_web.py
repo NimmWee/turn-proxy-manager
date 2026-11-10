@@ -37,7 +37,7 @@ class RequestBudget:
         # Store hashes, never bearer values. Hard bounds cover random-token/IP spray.
         key = hashlib.sha256(token.encode()).hexdigest()
         buckets = [("global", 300), ("ip:" + ip, 120), ("credential:" + key, 30)]
-        if operation == "enroll":
+        if operation in ("enroll", "claim"):
             buckets += [("enroll-ip:" + ip, 10), ("enroll-token:" + key, 10)]
         with self.lock:
             now = self.clock()
@@ -65,6 +65,12 @@ class Registration(BaseModel):
     request_id: uuid.UUID
 
 
+class BootstrapClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    device_id: uuid.UUID
+    device_token_hash: str = Field(pattern=r"^[a-f0-9]{64}$", strict=True)
+
+
 def install_routes(app, rpc, rpc_limit):
     budget = RequestBudget()
 
@@ -83,7 +89,8 @@ def install_routes(app, rpc, rpc_limit):
             token = "invalid"
         operation = request.url.path.rsplit("/", 1)[-1]
         budget.claim(operation, request.client.host if request.client else "unknown", token)
-        if scheme.lower() != "bearer" or _digest(token, "user" if operation == "enroll" else "device") is None:
+        kind = "bootstrap" if operation == "claim" else "user" if operation == "enroll" else "device"
+        if scheme.lower() != "bearer" or _digest(token, kind) is None:
             raise ClientFault("credential_invalid")
         return token
 
@@ -105,6 +112,12 @@ def install_routes(app, rpc, rpc_limit):
     @app.get(PREFIX + "status")
     async def status(token=Depends(bearer)):
         return await invoke("client.status", {"token": token})
+
+    @app.post(PREFIX + "bootstrap/claim")
+    async def bootstrap_claim(value: BootstrapClaim, request: Request, nonce=Depends(bearer)):
+        result = await invoke("client.bootstrap_claim", {'nonce': nonce, **value.model_dump(mode='json'),
+                              'source_ip': request.client.host if request.client else 'unknown'})
+        return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
     @app.get(PREFIX + "subscription")
     async def subscription(request: Request, token=Depends(bearer)):

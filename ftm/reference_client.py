@@ -106,6 +106,13 @@ class ReferenceClient:
         _, data, _ = self._request("status", self.token)
         return data
 
+    def claim_bootstrap(self, nonce, device_id):
+        if _digest(nonce, 'bootstrap') is None:
+            raise ClientSyncError()
+        _, data, _ = self._request('bootstrap/claim', nonce, {'device_id': device_id, 'device_token_hash': _digest(self.token, 'device')})
+        self.state = 'REGISTERED'
+        return data
+
     def refresh(self):
         try:
             status, value, etag = self._request("subscription", self.token, etag=self.etag if self.last_good else None)

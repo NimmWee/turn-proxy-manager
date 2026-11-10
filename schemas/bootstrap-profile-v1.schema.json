@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FreeTurn Manager private bootstrap v1",
+  "description": "Secret personal artifact. Native application integration is required; not an upstream share extension.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "format", "device_id", "public_key", "origin", "internal_api_ip", "claim_nonce", "expires_at", "share"],
+  "properties": {
+    "version": {"const": 1},
+    "format": {"const": "ftm-bootstrap"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "public_key": {"type": "string", "pattern": "^[A-Za-z0-9+/]{43}=$"},
+    "origin": {"type": "string", "pattern": "^https://[0-9.]+$", "maxLength": 23},
+    "internal_api_ip": {"type": "string", "format": "ipv4"},
+    "claim_nonce": {"type": "string", "pattern": "^ftmb1_[A-Za-z0-9_-]{43}$"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "share": {"type": "string", "pattern": "^freeturn://", "maxLength": 65536}
+  }
+}

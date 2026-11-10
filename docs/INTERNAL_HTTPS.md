@@ -26,4 +26,4 @@ Actual public→private restore удалил exception; инъекция оши�
 
 Финальное исправление availability установлено hot без VPN/SSH restart: runtime `df4586ea13418c73`. Настоящая инъекция ошибки ensure удалила правило, повтор ensure вернул его; systemd ExecStartPost подтверждён с `ignore_errors=yes`. Это targeted проверка, не повторный restart сети с повреждённой live конфигурацией. Data checkpoint не изменился. Свежий pinned SSH и внешний HTTPS anonymous401 PASS.
 
-Bootstrap/claim и клиентский secure storage ещё не реализованы. Physical Android/iPhone/Windows E2E после этих изменений NOT RUN. Исходная пользовательская проверка iPhone остаётся отдельным историческим результатом.
+Серверный [bootstrap/claim](BOOTSTRAP.md) реализован следующим блоком; клиентский secure storage ещё не интегрирован. Physical Android/iPhone/Windows E2E после этих изменений NOT RUN. Исходная пользовательская проверка iPhone остаётся отдельным историческим результатом.

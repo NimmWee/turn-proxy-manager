@@ -6,9 +6,11 @@
 
 ## Текущий этап
 
+**Персональный bootstrap/claim реализован и установлен.** Root-only private artifact, hash-only TTL nonce, claim только с собственного VPN IP, atomic consume/idempotent retry и переход к managed без замены WG keys/CID. Реальный namespace proof, public-origin XFF spoof отказ, cleanup и новая offsite копия PASS. Это серверная часть; выдача из панели и native import ещё впереди. [Подробности](BOOTSTRAP.md).
+
 **Разработка возобновлена новым поручением после ночного cutoff.** Client HTTPS API enroll/status/subscription уже установлен и реально проверен через restricted IPC к kernel WG. Per-device config без private key, pending/ETag304, revoke-before304 и bearer scope isolation PASS. Это серверный контракт с reference caller, не готовое Android/Windows приложение. [Протокол и проверки](CLIENT_API.md).
 
-**HTTPS внутри VPN проверен.** Узкое INPUT разрешение TCP443, проверка публичной TLS identity при внутреннем TCP адресе, настоящий WG namespace config/304 и запрет22/8080. Private/public restore и rollback синхронизируют исключение; network restart восстановил правильный порядок. Финальная offsite копия14 metadata/2 peers расшифрована в WSL; ключи/iPhone сохранены. [Подробности](INTERNAL_HTTPS.md). Следующий серверный блок — bootstrap/claim и admin re-auth/export.
+**HTTPS внутри VPN проверен.** Узкое INPUT разрешение TCP443, проверка публичной TLS identity при внутреннем TCP адресе, настоящий WG namespace config/304 и запрет22/8080. Private/public restore и rollback синхронизируют исключение; network restart восстановил правильный порядок. Offsite копия14 metadata/2 peers расшифрована в WSL; после bootstrap сделана более новая копия15/2. Ключи/iPhone сохранены. [Подробности](INTERNAL_HTTPS.md).
 
 **Lifecycle токенов этапа4 проверен.** Hash-only user/device credentials, rotation и отзыв, без возрождения старого credential при re-enable. Реальная проверка с WG/RPC/root CLI PASS, ключи и профиль сохранены. [Подробности foundation](STAGE4_PROGRESS.md); HTTPS endpoints добавлены следующим блоком выше.
 
@@ -52,7 +54,7 @@
 
 ## Проверки
 
-Последний полный локальный прогон —115 tests: Windows110PASS/5skips, WSL109PASS/6web dependency skips, baseline8 и binary smoke PASS. Ниже сохранена историческая матрица ранних этапов; результаты новых блоков находятся в документах выше.
+Последний полный локальный прогон —121 tests: Windows116PASS/5skips, WSL114PASS/7web dependency skips, baseline8 и binary smoke PASS. Ниже сохранена историческая матрица ранних этапов; результаты новых блоков находятся в документах выше.
 
 | Проверка | Результат |
 | --- | --- |
@@ -123,6 +125,6 @@ Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не
 
 ## Следующий конкретный шаг
 
-Managed startup, checkpoint, IPC, русская панель, IP/internal HTTPS и client registration/subscriptions проверены. Следующий шаг — bootstrap/claim и admin re-auth/export этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [Client API](CLIENT_API.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
+Managed startup, checkpoint, IPC, русская панель, IP/internal HTTPS, client registration/subscriptions и серверный bootstrap/claim проверены. Следующий шаг — admin re-auth/export из панели и native import этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [Bootstrap](BOOTSTRAP.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
 
 Рабочий VPS по-прежнему не используется как тестовая среда. Новый тестовый VPS предоставлен пользователем отдельно; доступ и изменение его Fail2ban разрешены текущим поручением.

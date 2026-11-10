@@ -33,7 +33,7 @@ def config(host, *, panel_slug=None):
     handle @panel {
         reverse_proxy 127.0.0.1:8080
     }
-    @client path /api/client/v1/enroll /api/client/v1/status /api/client/v1/subscription
+    @client path /api/client/v1/enroll /api/client/v1/status /api/client/v1/subscription /api/client/v1/bootstrap/claim
     handle @client {
         reverse_proxy 127.0.0.1:8080
     }

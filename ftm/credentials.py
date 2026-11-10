@@ -20,7 +20,7 @@ def _identifier(value):
 
 
 def _digest(token, kind):
-    prefix = {"user": "ftmu1_", "device": "ftmd1_"}[kind]
+    prefix = {"user": "ftmu1_", "device": "ftmd1_", "bootstrap": "ftmb1_"}[kind]
     if not isinstance(token, str) or not re.fullmatch(prefix + r"[A-Za-z0-9_-]{43}", token):
         return None
     return hashlib.sha256(("ftm/credential/" + kind + "/" + token).encode()).hexdigest()

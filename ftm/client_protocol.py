@@ -1,6 +1,8 @@
 """Safe errors shared by root IPC and the native client HTTP boundary."""
 
 ERRORS = {
+    "bootstrap_unavailable": (410, "Стартовый профиль истёк или уже использован. Запросите новый у администратора"),
+    "bootstrap_source_denied": (403, "Активируйте стартовый профиль через его VPN-подключение"),
     "credential_invalid": (401, "Ключ доступа отсутствует или недействителен"),
     "device_disabled": (403, "Доступ устройства отключён"),
     "enrollment_denied": (403, "Регистрация недоступна: проверьте доступ и лимит устройств"),

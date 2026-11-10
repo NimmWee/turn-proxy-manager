@@ -33,6 +33,12 @@ def execute(request, *, uid, api_uid, store, agent):
     if type(request["v"]) is not int or request["v"] != 1 or not isinstance(request["op"], str):
         raise ValidationError("Unsupported control protocol")
     operation, args = request["op"], request["args"]
+    if operation == "client.bootstrap_claim":
+        _fields(args, ("nonce", "device_id", "device_token_hash", "source_ip"))
+        if not all(isinstance(v, str) for v in args.values()) or len(args['source_ip']) > 45:
+            raise ClientFault('invalid_request')
+        from .bootstrap import Bootstraps
+        return Bootstraps(store, agent).claim(args['nonce'], args['device_id'], args['device_token_hash'], args['source_ip'])
     if operation in ("client.enroll", "client.status", "client.subscription"):
         from .client_service import ClientService
         client = ClientService(store, agent)

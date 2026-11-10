@@ -216,6 +216,8 @@ class Store:
             if device["origin"] == "legacy" and not db.execute("SELECT 1 FROM settings WHERE key='managed_legacy_adopted' AND value='1'").fetchone():
                 raise ValidationError("Legacy revocation requires managed startup migration")
             db.execute("UPDATE device_tokens SET revoked_at=? WHERE device_id=? AND revoked_at IS NULL", (_now(), identifier))
+            # A fixed expired timestamp also survives a later wall-clock rollback.
+            db.execute("UPDATE bootstraps SET expires_at=? WHERE device_id=? AND consumed_at IS NULL", ('1970-01-01T00:00:00+00:00', identifier))
             if not device["enabled"]:
                 return
             revision = device["revision"] + 1
@@ -234,6 +236,8 @@ class Store:
                 raise ValidationError("Legacy user disable requires managed startup migration")
             db.execute("UPDATE users SET enabled=?,updated_at=? WHERE id=?", (int(enabled), _now(), identifier))
             if not enabled:
+                db.execute("""UPDATE bootstraps SET expires_at=? WHERE consumed_at IS NULL
+                           AND device_id IN (SELECT id FROM devices WHERE user_id=?)""", ('1970-01-01T00:00:00+00:00', identifier))
                 db.execute("""UPDATE device_tokens SET revoked_at=? WHERE revoked_at IS NULL
                            AND device_id IN (SELECT id FROM devices WHERE user_id=?)""", (_now(), identifier))
                 for device in db.execute("SELECT id,revision FROM devices WHERE user_id=? AND enabled=1", (identifier,)).fetchall():

@@ -21,7 +21,8 @@
 Предыдущий core milestone: [ENROLLMENT_PROGRESS.md](ENROLLMENT_PROGRESS.md); дальнейший HTTPS milestone описан отдельно выше.
 - [x] Узкий VPN HTTPS allowlist с проверкой IP TLS identity, client auth/throttling и сохранением последней рабочей конфигурации. Domain migration ещё впереди. [Проверки](INTERNAL_HTTPS.md).
 - [x] Контрактный reference caller явно отделён от реальных Android/Windows.
-- [ ] Bootstrap claim TTL/one-time consume и выдача профилей с admin re-auth.
+- [x] Серверный bootstrap claim TTL/one-time consume, root-only private issuance и reference transition. [Проверки](BOOTSTRAP.md).
+- [ ] Выдача профилей из панели с admin re-auth, безопасная повторная доставка/retention и QR.
 - [ ] Клиентская интеграция и настоящие Android/Windows devices.
 
 Ночное окно завершено. Разработка возобновлена новым поручением пользователя10.11.2026; старый cutoff не ограничивает это продолжение. Ночная автоматизация не возобновляется.

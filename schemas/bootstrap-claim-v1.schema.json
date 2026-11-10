@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+    },
+    "device_token_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Device Token Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "device_id",
+    "device_token_hash"
+  ],
+  "title": "BootstrapClaim",
+  "type": "object"
+}
