@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "version": "2.11.9",
+  "platform": "linux_amd64",
+  "url": "https://github.com/caddyserver/caddy/releases/download/v2.11.9/caddy_2.11.9_linux_amd64.tar.gz",
+  "sha512": "0e85544340290a16ce4bfb76fe7d65e9de1bf3a6e67f5ccfff30b30d27ea4c73e078077b7bf3e58ae60b6b12e44327705287059c775bca5782e8ee85ea7edd75",
+  "checksum_source": "https://github.com/caddyserver/caddy/releases/download/v2.11.9/caddy_2.11.9_checksums.txt"
+}

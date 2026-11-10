@@ -4,6 +4,8 @@
 
 ## Текущий этап
 
+**Доверенный IP TLS и фоновый reconciler проверены.** Caddy получил настоящий Let’s Encrypt certificate; внешний HTTPS client PASS. Публично пока только заглушка, панель остаётся private. Durable pending/applying add/revoke и lock contention проверены на WG без VPN/SSH restart; исходные профили сохранены. [Результаты и ограничения](HTTPS_RECONCILE_PROGRESS.md).
+
 **Private API и русская панель уже проверены на тестовом VPS.** Rootless FastAPI через ограниченный Unix IPC, действующий login/CSRF/logout, users/devices и настоящие метрики. UI проверен desktop/mobile/light/dark через SSH forwarding к серверу. После synthetic CRUD ключи/config/profile и VPN/SSH PID совпали. Checkpoint v2 включает web settings, offsite decode и реальные restore/rollback с изменением web identity PASS. Публичный Caddy/TLS, выдача новых клиентских профилей, подписки и full installer ещё не готовы. [Результат](STAGE3_PROGRESS.md).
 
 

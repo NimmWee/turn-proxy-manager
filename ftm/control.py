@@ -136,6 +136,9 @@ def serve():
     class Server(socketserver.UnixStreamServer):
         request_queue_size = 8
 
+        def service_actions(self):
+            self.reconciler.tick()
+
         def handle_error(self, request, client_address):
             print("Control request failed; details withheld", file=__import__("sys").stderr)
 
@@ -162,11 +165,17 @@ def serve():
             endpoint.unlink()
         state = read_private_json("/var/lib/vps-vk/main/state.json", 1048576)
         store = Store("/var/lib/ftm/manager.sqlite3")
+        with store.connect() as db:
+            subnet = db.execute("SELECT value FROM settings WHERE key='subnet'").fetchone()[0]
+        if subnet != state["subnet"]:
+            raise ValidationError("Database subnet differs from the active VPN")
         agent = NetworkAgent(state, config_dir="/etc/vps-vk/main", state_dir="/var/lib/ftm-agent")
+        from .reconcile_loop import ReconcileLoop
         with Server(SOCKET, _Handler) as server:
             os.chown(SOCKET, 0, account.pw_gid)
             os.chmod(SOCKET, 0o660)
             server.api_uid, server.store, server.agent = account.pw_uid, store, agent
+            server.reconciler = ReconcileLoop(store, agent)
             server.serve_forever(poll_interval=0.5)
     finally:
         os.close(lock_fd)

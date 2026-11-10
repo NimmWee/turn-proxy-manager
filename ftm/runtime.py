@@ -42,6 +42,8 @@ def install(checkpoint, offsite_sha256):
     files += [Path("ftm/migrations/001_initial.sql"), Path("scripts/verify_baseline.py"), Path("upstreams.lock.json")]
     if (source / "requirements.lock").is_file():
         files.append(Path("requirements.lock"))
+    if (source / "caddy.lock.json").is_file():
+        files.append(Path("caddy.lock.json"))
     if (source / "web/dist").is_dir():
         files += [path.relative_to(source) for path in (source / "web/dist").rglob("*") if path.is_file()]
     lock = json.loads((source / "upstreams.lock.json").read_text())
