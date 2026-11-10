@@ -25,7 +25,7 @@ Runtime **4c3d096c037baa98**. Последний ciphertext `/root/ftm-managed-e
 
 Локальный закрытый каталог `Downloads/FreeTurn-Test-2026-11-10`: `Панель.txt` и `panel-login.json` содержат адрес/логин/пароль панели; `iPhone-import.txt`/QR — сохранённый рабочий профиль; `backup-recovery.pass` — recovery phrase; ciphertext и отчёты лежат рядом. Секреты в Git не переносились. Браузерные проверочные сессии завершены/logout, старый SSH forward закрыт.
 
-Финальный локальный прогон106 tests:101PASS/5POSIX/OpenSSL skips; WSL106:103PASS/3web dependency skips. После read-only UI изменений дополнительно6 existing boundary cases, production build и реальный browser/API; operator CLI11 cases9PASS/2POSIX skips и реальные status/doctor. Baseline23 files/package verifier PASS. Проверка150 tracked files на секреты из private artifacts дала0 совпадений до финальных docs/operator файлов; эти новые файлы содержат только код/инструкции без credentials.
+Финальный локальный прогон106 tests:101PASS/5POSIX/OpenSSL skips; WSL106:103PASS/3web dependency skips. После read-only UI изменений дополнительно6 existing boundary cases, production build и реальный browser/API; operator CLI11 cases9PASS/2POSIX skips и реальные status/doctor. Baseline23 files/package verifier PASS. Финальная проверка153 tracked files на секреты из private artifacts дала0 совпадений. Working tree чистый, browser/SSH helpers и forward закрыты; после reboot свежий SSH вход PASS.
 
 Подробные результаты: `PUBLIC_HTTPS_PROGRESS.md`, `HTTPS_RECONCILE_PROGRESS.md`, `STAGE4_PROGRESS.md`, `PROFILE_CONTRACT.md`, `ENROLLMENT_PROGRESS.md`, `EVENTS_PROGRESS.md`, `OPERATIONS.md`.
 
