@@ -2,6 +2,8 @@
 
 **Обновлено:** 10.11.2026, Asia/Tomsk.
 
+Ночная передача: [NIGHT_HANDOFF.md](NIGHT_HANDOFF.md). Финальный full-stack reboot после actual latest restore PASS: VPN/API/Caddy/Fail2ban стартовали сами, HTTPS login и сохранность ключей/profile/checkpoint подтверждены. После08:20Томск продолжение только по новому поручению.
+
 ## Текущий этап
 
 **Начат этап4: lifecycle токенов.** Hash-only user/device credentials, rotation и отзыв, без возрождения старого credential при re-enable. Реальная проверка с WG/RPC/root CLI PASS, ключи и профиль сохранены. Это ещё не публичные подписки/enrollment. [Подробности](STAGE4_PROGRESS.md).

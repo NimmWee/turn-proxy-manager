@@ -71,3 +71,9 @@ Offsite `/root/ftm-managed-e3336b9bbf.vpnbackup`, SHA256dab56a048c677b26e80f487e
 Read-only RU журнал в панели установлен и проверен HTTPS браузером desktop/mobile/dark:92 реальных событий, поиск/empty, no overflow/JS errors. Auth401/200, response allowlist и IPC limit guards PASS. Без новых UI автотестов, production build и6 существующих boundary checks. `EVENTS_PROGRESS.md`.
 
 Runtime **46acba450725bbf4** (проверен readlink). API/control перезапущены, VPN/SSH/Caddy PID сохранены. Root metadata не менялась; последний актуальный offsite остаётся e3336b9bbf/dab56a048c677b26e80f487e58824dfbc5f01978efe5628b7f91efd5fd2cf0ca. Клиентских публичных endpoints/secret IPC нет. До08:20 завершить финальную проверку/передачу; послеcutoff новые изменения не начинать. GitHub не отправлять.
+
+## Финальная передача
+
+`ftm status`/`ftm doctor` установлены и реально PASS. Current runtime **4c3d096c037baa98**. После actual restore последнего e3336b9bbf checkpoint выполнен финальный **full-stack reboot**: новыйboot_id, прежнийSSHhostkey, автоматические8служб, kernel WG keys/PSK/profile, snapshot equality и HTTPS login/events/logout PASS. `/root/ftm-fullstack-reboot-report.json` и private local copy. Первичный assert dbpurgeage исправлен с pretty text на numeric extraction; Rootполитика не менялась.
+
+Текущая передача — **NIGHT_HANDOFF.md**, более ранние milestones выше исторические. Новые features после08:20Томск/01:20UTC не начинать. Проверочные browser sessions/logout и прежний SSH forward закрыты; последний SSH helper после скачивания отчёта закрывается. Секреты только в private Downloads/root files, GitHub push не делался. Следующие конкретные задачи и NOT RUN перечислены в handoff.
