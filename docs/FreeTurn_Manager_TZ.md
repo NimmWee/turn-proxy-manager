@@ -187,6 +187,19 @@ API под `/api/client/v1/` и `/api/admin/v1/` (внутренние пути 
 - При обрыве VPN политика leaks: сохранять блокировку обычного трафика при включённом VPN / kill switch, если ОС позволяет; соблюдать DNS/IPv6 и split tunneling. В UI показывать фактический транспорт и причину последней смены.
 - Возможность сброса диагностики и экспорта очищенного лога (без ключей/ссылок/VK-secret).
 
+### 6.1. Раздельная маршрутизация сайтов и DNS — уточнение 10.11.2026
+
+По запросу пользователя добавить в будущую панель/клиенты routing policy по скриншоту `POLESNIESOVETI12/web-panel-proxy`: российские сайты и локальные сети напрямую, YouTube и push Apple/Google через VPN, connectivity checks напрямую, BitTorrent block, split DNS и простое добавление доменов администратором. Исследование, pinned source, порядок правил и ограничения: [ROUTING_POLICY_RESEARCH.md](ROUTING_POLICY_RESEARCH.md). Сейчас **только требования/проектирование**, статус NOT IMPLEMENTED / NOT RUN.
+
+- «Напрямую» — физический канал клиента с его провайдерским IP, не FreeTurn Direct до VPS. Исполнение в Android/Windows до WG encryption; server-side egress и обычный WG AllowedIPs не считаются доменным маршрутизатором. Сохранить WG/FreeTurn и текущий server baseline, не ставить Xray/чужую панель ради копирования UI.
+- В разделе «VPN/Транспорт → Маршрутизация» семь переключателей со скриншота и поля DIRECT/VPN/BLOCK: один домен в строке, без raw JSON/regex. IDNA/hostname validation, exact/«с поддоменами», предел300 custom domains как начальная настройка, dedup, конфликтный preview, добавление/удаление/поиск. Domain-boundary matching обязателен; URL/path/port/credentials/IP/public-suffix-only записи не принимать.
+- RU preset: контролируемые версии GeoSite/RU domain list, .ru/.su/.рф и GeoIP RU fallback. YouTube/push domains выше широкого RU/GeoIP bypass. Явные admin domain exceptions выше пресетов; BLOCK и защитные invariants выше исключений. Default — VPN; недоступность туннеля не превращает VPN-classified flow в DIRECT. Админские DIRECT исключения сохраняют согласованное поведение kill switch и совместимость с OS lockdown.
+- LAN bypass не ослабляет запрет доступа к закрытым private/metadata службам VPS. Точный internal management IP/TCP443 остаётся **VPN-only** и приоритетнее пересекающейся домашней сети; TURN/VK/auth sockets защищены от попадания в свой туннель. Connectivity/captive portal checks direct отделены от tunnel health checks.
+- Split DNS: стартовые кандидаты Яндекс для RU/DIRECT и Cloudflare/Google для VPN/остального, настраиваемые администратором; локальные имена — через resolver/mDNS домашней сети, без отправки private names публичному DNS. До реализации подтвердить TLS endpoints/маршруты. DNS следует routing intent домена, CNAME/TTL/A/AAAA/shared CDN, без скрытого direct plaintext fallback при ошибке VPN resolver. Проверить own DoH/DoT, QUIC, IP literals и невозможность domain classification; TLS interception не добавлять. Текущий IPv6 block не отменять без leak tests.
+- BitTorrent checkbox требует настоящего enforcement в заявленном клиентском/серверном scope, без DIRECT обхода. Одна блокировка портов/скопированное Xray protocol rule не доказывает обнаружение любого encrypted BitTorrent. Отдельно проверить DHT/смену порта и ложные срабатывания; неподдерживаемую возможность честно показывать в UI.
+- Routing policy версионируется, доставляется managed client с schema/capability negotiation, применяется атомарно с rollback/LKG и отображением фактической device revision. Не добавлять неизвестные поля в текущий strict v1 или импорт Anton48. Изменения через защищённый admin API/ограниченный IPC, root SQLite ownership сохраняется; policy входит в encrypted backup. Не вести персональный журнал посещений/DNS.
+- Цель — доступность выбранных сервисов с обычного IP при включённом VPN. **Не обещать исчезновение всех VPN-detection сообщений:** OS VPN state, account/geolocation/IP reputation могут проверяться независимо. Приёмка T29–T31 требует измеренного DIRECT/VPN egress, DNS и настоящих native-client сценариев; текущий профиль этих правил ещё не применяет.
+
 ## 7. Android FreeTurn
 
 - Ответвиться от официального FreeTurn, проверить версию/двоичные native-библиотеки, сохранив прежние функции: профили, импорт, WG/AWG, Relay/Direct, split tunneling, reconnect, настройки DNS.
@@ -408,6 +421,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/NimmWee/Vps/main/install.sh)
 | T26 | Reconfigure IP ↔ domain через `ftm config web` | Нет потери пользователей, ключей и VPN; предупреждение о смене URL и безопасная миграция подписок |
 | T27 | `--non-interactive --config` на тестовой чистой VM | Воспроизводимая установка/repair, секреты не попадают в аргументы/логи, проверены повторный запуск и rollback |
 | T28 | Android/Windows VK auth и повторные CAPTCHA | Calls path первым; cache и согласованный fallback без дублей одного challenge, корректные TTL/изоляция/cancel/backoff; реальный VK VPN-трафик. На10.11.2026 только исследование, реализация не начата |
+| T29 | Domain routing и администраторские исключения | RU/LAN/custom DIRECT через физический канал, YouTube/push/custom VPN через VPS; приоритеты/shared IP, protected management и actual applied revision проверены на Android/Windows |
+| T30 | Split DNS при routing policy, смене сети и сбоях | Resolver/путь согласованы с domain policy, корректны CNAME/TTL/A/AAAA; нет скрытого direct DNS/VPN fallback, IPv6 leaks и маршрутной петли |
+| T31 | BitTorrent blocking | Реальное enforcement в заявленном scope, DHT/смена порта и отсутствие DIRECT обхода; обычные HTTPS/QUIC работают, unsupported client не получает ложный статус «применено» |
 
 ## 17. Что вне проекта
 

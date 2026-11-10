@@ -58,8 +58,10 @@
 5. Android: выделенный GPL-совместимый fork, импорт/обновления, Connection Manager, защищённое хранилище, миграция подписи. APK и испытания на устройствах.
 6. Windows: spike реального системного туннеля, выбор драйвера/лицензии, service/IPC ACL, UI, reconnect, installer/uninstaller, sleep и leak tests.
 7. Матрица нагрузки и скорости, сбои, backup/restore/rollback, DNS/IPv6, совместимость Anton48, реальные сети. CPUQuota менять только по измерениям.
-8. Закреплённые release artifacts, интерактивный install/upgrade/repair/migrate/restore/uninstall, финальная проверка T01–T28 на чистых системах и реальных клиентах.
+8. Закреплённые release artifacts, интерактивный install/upgrade/repair/migrate/restore/uninstall, финальная проверка T01–T31 на чистых системах и реальных клиентах.
 
 Уточнение10.11.2026 для будущих этапов5/6: VK Calls-first auth/cache и устранение дублей CAPTCHA описаны в [исследовании](VK_AUTH_RESEARCH.md), ТЗ§5.1/T28. По прямому поручению сейчас только проектирование; реализацию этой доработки не начинать до нового поручения. Незакоммиченные изменения VPNN закреплены SHA256, не считать их включёнными в FTM по ссылке на upstream HEAD.
 
 Перед каждым следующим этапом план уточняется по результатам предыдущего. Выполненные unit/mocks не заменяют E2E.
+
+Уточнение10.11.2026: [domain routing/split DNS/BitTorrent](ROUTING_POLICY_RESEARCH.md), ТЗ§6.1/T29–T31. На этапе3 — admin plain-domain editor/policy revisions; этапе4 — versioned delivery/capabilities/rollback; этапах5/6 — native per-flow execution и DNS; этапе7 — actual egress/leak/BitTorrent/resource проверки. Сейчас только исследование и запись требований; не менять клиенты, VPS/DNS/firewall или рабочий iPhone-profile в рамках этого поручения.

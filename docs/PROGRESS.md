@@ -6,6 +6,8 @@
 
 ## Текущий этап
 
+**Уточнение маршрутизации — только документация.** По скриншоту и исходникам web-panel-proxy добавлены ТЗ§6.1/T29–T31: RU/LAN direct, YouTube/push VPN, connectivity direct, BitTorrent block, split DNS и plain-domain editor. Это будущий native per-flow router, не уже действующие серверные правила. Implementation/E2E **NOT RUN**; VPS, профили, firewall/DNS не менялись. [Решение и границы](ROUTING_POLICY_RESEARCH.md).
+
 **Уточнение VK auth — только исследование.** Пользователь подтвердил импорт Android-профиля и сообщил о двух CAPTCHA; Android data-plane E2E этим сообщением не подтверждён. Изучены iOS auth и рабочие изменения `C:\VPNN`, решение добавлено в ТЗ§5.1/T28. Предложены Calls-first, bounded memory cache и согласованный manual fallback; причина двух окон пока гипотеза. Реализация по прямому указанию пользователя **не начата**, VPS/профили не менялись. [Исследование](VK_AUTH_RESEARCH.md).
 
 **Выдача из панели с повторным паролем работает.** Root re-auth, private short-lived delivery cache и durable request UUID исключают повторный peer/rotation при retry. Реальный API и браузерный download subscription/bootstrap проверены; временные подключения убраны. Финальный checkpoint17/2 проверен вне VPS. [Проверки и ограничения](ADMIN_EXPORT.md). Следующие блоки — native import/secure storage/Connection Manager, QR и реальные VK bootstrap/leak tests.
