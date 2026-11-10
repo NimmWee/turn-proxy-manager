@@ -1,0 +1,51 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "platform": {
+      "enum": [
+        "android",
+        "windows",
+        "other"
+      ],
+      "title": "Platform",
+      "type": "string"
+    },
+    "public_key": {
+      "maxLength": 44,
+      "minLength": 44,
+      "title": "Public Key",
+      "type": "string"
+    },
+    "client_id": {
+      "pattern": "^[a-f0-9]{32}$",
+      "title": "Client Id",
+      "type": "string"
+    },
+    "device_token_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Device Token Hash",
+      "type": "string"
+    },
+    "request_id": {
+      "format": "uuid",
+      "title": "Request Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "platform",
+    "public_key",
+    "client_id",
+    "device_token_hash",
+    "request_id"
+  ],
+  "title": "Registration",
+  "type": "object"
+}

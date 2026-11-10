@@ -7,6 +7,10 @@ from .credentials import _digest, _identifier
 from .store import Conflict, ValidationError, _now
 
 
+class EnrollmentAuthorization(ValidationError):
+    pass
+
+
 class Enrollment:
     def __init__(self, store):
         self.store = store
@@ -14,7 +18,7 @@ class Enrollment:
     def register(self, user_token, *, name, platform, public_key, client_id, device_token_hash, request_id):
         user_hash = _digest(user_token, "user")
         if user_hash is None:
-            raise ValidationError("Enrollment authorization failed")
+            raise EnrollmentAuthorization("Enrollment authorization failed")
         if platform not in ("android", "windows", "other"):
             raise ValidationError("This platform requires manual profile delivery")
         if not isinstance(device_token_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", device_token_hash):
@@ -25,7 +29,7 @@ class Enrollment:
                                       JOIN users u ON u.id=s.user_id
                                       WHERE s.token_hash=? AND s.revoked_at IS NULL AND u.enabled=1""", (user_hash,)).fetchone()
             if subscription is None:
-                raise ValidationError("Enrollment authorization failed")
+                raise EnrollmentAuthorization("Enrollment authorization failed")
             device = self.store._create_device(db, subscription["user_id"], name, platform, public_key, request_id,
                                                client_id=client_id, credential_hash=device_token_hash)
             if not device["enabled"] or device["state"] in ("revoking", "revoked"):

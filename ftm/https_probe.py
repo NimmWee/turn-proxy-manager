@@ -33,6 +33,10 @@ def config(host, *, panel_slug=None):
     handle @panel {
         reverse_proxy 127.0.0.1:8080
     }
+    @client path /api/client/v1/enroll /api/client/v1/status /api/client/v1/subscription
+    handle @client {
+        reverse_proxy 127.0.0.1:8080
+    }
 """.replace("SLUG", panel_slug)
     return """{
     admin off

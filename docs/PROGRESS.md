@@ -6,6 +6,8 @@
 
 ## Текущий этап
 
+**Разработка возобновлена новым поручением после ночного cutoff.** Client HTTPS API enroll/status/subscription уже установлен и реально проверен через restricted IPC к kernel WG. Per-device config без private key, pending/ETag304, revoke-before304 и bearer scope isolation PASS. Это серверный контракт с reference caller, не готовое Android/Windows приложение. [Протокол и проверки](CLIENT_API.md).
+
 **Начат этап4: lifecycle токенов.** Hash-only user/device credentials, rotation и отзыв, без возрождения старого credential при re-enable. Реальная проверка с WG/RPC/root CLI PASS, ключи и профиль сохранены. Это ещё не публичные подписки/enrollment. [Подробности](STAGE4_PROGRESS.md).
 
 Существующий share codec/JSON Schema проверен настоящим pinned Go parser на трёх synthetic profiles. Android source mapping/SHA проверены, runtime NOT RUN. [Контракт](PROFILE_CONTRACT.md). Реальный клиентский secure storage ещё не интегрирован; неизвестные managed поля нельзя добавлять в upstream share JSON.
@@ -119,6 +121,6 @@ Baseline не изменён. `install --dry-run`, `inspect` и `preflight` не
 
 ## Следующий конкретный шаг
 
-Managed startup, checkpoint, IPC, русская панель и IP HTTPS проверены. Следующий шаг — registration/subscriptions/bootstrap этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [HTTPS](PUBLIC_HTTPS_PROGRESS.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
+Managed startup, checkpoint, IPC, русская панель, IP HTTPS и client registration/subscriptions проверены. Следующий шаг — internal VPN HTTPS и bootstrap/claim этапа4. Android, live new-CID authorization и три настоящих клиента остаются открытыми проверками. [Client API](CLIENT_API.md), [очередь этапов](IMPLEMENTATION_PLAN.md).
 
 Рабочий VPS по-прежнему не используется как тестовая среда. Новый тестовый VPS предоставлен пользователем отдельно; доступ и изменение его Fail2ban разрешены текущим поручением.

@@ -16,10 +16,10 @@
 ## Следующие блоки
 
 - [x] Проверить pinned Android/Go profile parsers, JSON Schema и round-trip настоящего Go parser. Android runtime NOT RUN; source mapping/SHA проверены. Не выдумывать freeturn URL flags. [Контракт](PROFILE_CONTRACT.md).
-- [ ] Enrollment: on-device key, idempotency, user credential check и device limit в одной транзакции, отдельный device credential и per-device config/revision/ETag.
+- [x] Enrollment: on-device key, idempotency, user credential check и device limit в одной транзакции, отдельный device credential и per-device config/revision/ETag. HTTPS/IPC и reference caller проверены; native clients отдельно. [CLIENT_API.md](CLIENT_API.md).
 
-Транзакционное server core enrollment и client-held credential уже проверены: [ENROLLMENT_PROGRESS.md](ENROLLMENT_PROGRESS.md). Публичный endpoint/config/revisions ещё не готовы, поэтому общий пункт остаётся открытым.
+Предыдущий core milestone: [ENROLLMENT_PROGRESS.md](ENROLLMENT_PROGRESS.md); дальнейший HTTPS milestone описан отдельно выше.
 - [ ] Узкий VPN HTTPS allowlist с проверкой IP/domain TLS identity, client auth/throttling, bootstrap claim TTL/one-time consume и сохранением последней рабочей конфигурации.
 - [ ] Клиентский reference mock явно отделить от реальных Android/Windows; затем клиентская интеграция и настоящие devices.
 
-До 08:20 Томск /01:20 UTC закончить доступный блок, после cutoff новые изменения не начинать.
+Ночное окно завершено. Разработка возобновлена новым поручением пользователя10.11.2026; старый cutoff не ограничивает это продолжение. Ночная автоматизация не возобновляется.

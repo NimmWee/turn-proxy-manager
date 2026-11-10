@@ -33,12 +33,18 @@ class BodyLimit:
             try:
                 message = await asyncio.wait_for(receive(), timeout=5)
             except asyncio.TimeoutError:
+                if scope.get("path", "").startswith("/api/client/v1/"):
+                    from .client_web import problem
+                    return await problem("invalid_request", 408)(scope, receive, send)
                 return await JSONResponse({"detail": "Время загрузки запроса истекло"}, 408)(scope, receive, send)
             if message["type"] == "http.disconnect":
                 return
             data = message.get("body", b"")
             total += len(data)
             if total > 16384:
+                if scope.get("path", "").startswith("/api/client/v1/"):
+                    from .client_web import problem
+                    return await problem("invalid_request", 413)(scope, receive, send)
                 return await JSONResponse({"detail": "Запрос слишком большой"}, 413, headers={"Connection": "close"})(scope, receive, send)
             chunks.append(data)
             if not message.get("more_body", False):
@@ -109,6 +115,9 @@ def create_app(config, *, rpc=control.request, static_dir=None):
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, error):
         # FastAPI's default detail can echo passwords and input values.
+        if request.url.path.startswith("/api/client/v1/"):
+            from .client_web import problem
+            return problem("invalid_request")
         return JSONResponse({"detail": "Проверьте поля формы"}, status_code=422)
 
     def session(request: Request):
@@ -213,6 +222,9 @@ def create_app(config, *, rpc=control.request, static_dir=None):
     async def device_enabled(identifier: uuid.UUID, value: Enabled):
         return await invoke("devices.set_enabled", {"id": str(identifier), "enabled": value.enabled})
 
+    if public_origin:
+        from .client_web import install_routes
+        install_routes(app, rpc, rpc_limit)
     if (assets / "assets").is_dir():
         app.mount(prefix + "/assets", StaticFiles(directory=assets / "assets"), name="panel-assets")
     return app

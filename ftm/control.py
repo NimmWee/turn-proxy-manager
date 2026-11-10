@@ -13,6 +13,7 @@ from .agent import NetworkAgent, reconcile
 from .compat import managed_status
 from .installer import _unique_object, read_private_json
 from .store import Store, ValidationError
+from .client_protocol import ClientFault, ERRORS
 
 SOCKET = "/run/ftm/control.sock"
 MAX_REQUEST = 16384
@@ -32,6 +33,16 @@ def execute(request, *, uid, api_uid, store, agent):
     if type(request["v"]) is not int or request["v"] != 1 or not isinstance(request["op"], str):
         raise ValidationError("Unsupported control protocol")
     operation, args = request["op"], request["args"]
+    if operation in ("client.enroll", "client.status", "client.subscription"):
+        from .client_service import ClientService
+        client = ClientService(store, agent)
+        if operation == "client.enroll":
+            _fields(args, ("token", "registration"))
+            return client.enroll(args["token"], args["registration"])
+        _fields(args, ("token",), ("if_none_match",) if operation == "client.subscription" else ())
+        if "if_none_match" in args and (not isinstance(args["if_none_match"], str) or len(args["if_none_match"]) > 512):
+            raise ClientFault("invalid_request")
+        return client.status(args["token"]) if operation == "client.status" else client.subscription(args["token"], args.get("if_none_match"))
     if operation == "status":
         _fields(args)
         return managed_status(agent.baseline, agent._registry())
@@ -91,6 +102,8 @@ def request(operation, args=None, *, path=SOCKET, timeout=30):
         raise RuntimeError("Control response rejected")
     reply = json.loads(raw, object_pairs_hook=_unique_object)
     if not isinstance(reply, dict) or reply.get("ok") is not True:
+        if isinstance(reply, dict) and reply.get("error") in ERRORS:
+            raise ClientFault(reply["error"])
         raise RuntimeError("Control operation rejected or unavailable")
     return reply["result"]
 
@@ -118,6 +131,8 @@ class _Handler(socketserver.StreamRequestHandler):
             finally:
                 os.close(fd)
             response = {"ok": True, "result": result}
+        except ClientFault as error:
+            response = {"ok": False, "error": error.code}
         except Exception:
             # The request and exception may contain credentials; never log them.
             response = {"ok": False, "error": "rejected_or_unavailable"}
