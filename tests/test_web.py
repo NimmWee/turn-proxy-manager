@@ -14,6 +14,37 @@ class WebBoundaryTests(unittest.TestCase):
     def setUpClass(cls):
         cls.config = make_config("admin", "synthetic web admin phrase")
 
+    def test_dashboard_reads_and_subscription_revoke_respect_session_boundaries(self):
+        config = dict(self.config, version=2, public_origin="https://8.8.8.8", secure_cookie=True)
+        calls = []
+
+        def rpc(operation, args):
+            calls.append((operation, args))
+            return {"ok": True}
+
+        base = "/a/" + config["panel_slug"] + "/api"
+        revoke = base + "/users/11111111-1111-4111-8111-111111111111/subscription-revoke"
+        payload = {"expected_version": 2, "password": "synthetic web admin phrase"}
+        origin = {"Origin": config["public_origin"]}
+        with TestClient(create_app(config, rpc=rpc), base_url=config["public_origin"]) as client:
+            for path in ("/metrics/history", "/subscriptions", "/settings"):
+                self.assertEqual(client.get(base + path).status_code, 401)
+            self.assertEqual(client.post(revoke, json=payload, headers=origin).status_code, 401)
+            self.assertEqual(calls, [])
+            response = client.post(base + "/auth/login", headers=origin,
+                                   json={"username": "admin", "password": payload["password"]})
+            self.assertEqual(response.status_code, 200)
+            headers = {**origin, "X-CSRF-Token": response.json()["csrf"]}
+            self.assertEqual(client.get(base + "/metrics/history?hours=6").status_code, 200)
+            self.assertEqual(client.get(base + "/subscriptions?page=2&search=Family").status_code, 200)
+            self.assertEqual(client.get(base + "/settings").status_code, 200)
+            self.assertEqual(client.post(revoke, json=payload, headers=origin).status_code, 403)
+            self.assertEqual(client.post(revoke, json=payload, headers={**headers, "Origin": "https://wrong.invalid"}).status_code, 403)
+            self.assertEqual(client.post(revoke, json={**payload, "expected_version": True}, headers=headers).status_code, 422)
+            self.assertEqual(calls, [("metrics.history", {"hours": 6}), ("subscriptions.list", {"page": 2, "search": "Family"})])
+            self.assertEqual(client.post(revoke, json=payload, headers=headers).status_code, 200)
+            self.assertEqual(calls[-1][0], "admin.subscription_revoke")
+
     def test_login_csrf_origin_and_logout_protect_mutations(self):
         calls = []
         def rpc(operation, args):

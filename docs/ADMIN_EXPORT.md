@@ -1,5 +1,7 @@
 # Выдача подписки и стартового профиля из панели
 
+**Актуализация17.11:** Windows0.14 уже реализует native import `ftm-enrollment` и `ftm-bootstrap`, user enrollment/pending recovery и manual managed sync. Проверено локально с actual crypto/Go и fake HTTP; реальное client E2E NOT RUN. Формат export/серверный API не менялись; UI панели этой задачей не обновлялся. [Windows0.14](WINDOWS_ENROLLMENT_PLAN.md). Ниже сохранён первоначальный серверный отчёт10.11.
+
 10.11.2026, согласованный тестовый VPS. В «Пользователях» для enabled пользователя доступны «Подписка» и «Стартовый профиль». Файлы скачиваются как JSON; опубликованные Android/Windows пока не умеют импортировать эти envelopes, что явно написано в форме. QR и native import ещё впереди.
 
 ## Доступ и доставка

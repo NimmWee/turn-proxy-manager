@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile></PropertyGroup>
+  <ItemGroup><Compile Include="../ui/ProfileCatalog.cs" Link="ProfileCatalog.cs" /><Compile Include="../ui/ShareDocument.cs" Link="ShareDocument.cs" /><Compile Include="../ui/BackupCrypto.cs" Link="BackupCrypto.cs" /></ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="SSH.NET" Version="2026.0.1" />
+  </ItemGroup>
+  <ItemGroup><Compile Include="../ui/CatalogBackup.cs" Link="CatalogBackup.cs" /><Compile Include="../ui/SafeExport.cs" Link="SafeExport.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ReconnectPolicy.cs" Link="ReconnectPolicy.cs" /><Compile Include="../ui/LoginStartup.cs" Link="LoginStartup.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/Models/SshConfig.cs" Link="SshConfig.cs" /><Compile Include="../ui/SshTrust.cs" Link="SshTrust.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/SshProbe.cs" Link="SshProbe.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/SocksSettings.cs" Link="SocksSettings.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/RoutingPolicy.cs" Link="RoutingPolicy.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ConnectionDiagnostics.cs" Link="ConnectionDiagnostics.cs" /><Compile Include="../ui/ServiceClient.cs" Link="ServiceClient.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/UiTheme.cs" Link="UiTheme.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ServicePreparation.cs" Link="ServicePreparation.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ClosePolicy.cs" Link="ClosePolicy.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/CoreJournal.cs" Link="CoreJournal.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/SystemRoutingSettings.cs" Link="SystemRoutingSettings.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ManagedBootstrap.cs" Link="ManagedBootstrap.cs" /><Compile Include="../ui/ManagedClient.cs" Link="ManagedClient.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ManagedConfig.cs" Link="ManagedConfig.cs" /><Compile Include="../ui/ProfileCatalog.Managed.cs" Link="ProfileCatalog.Managed.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ManagedUpdateBuilder.cs" Link="ManagedUpdateBuilder.cs" /><Compile Include="../ui/ManagedSubscription.cs" Link="ManagedSubscription.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/EnrollmentLink.cs" Link="EnrollmentLink.cs" /><Compile Include="../ui/EnrollmentAttempt.cs" Link="EnrollmentAttempt.cs" /><Compile Include="../ui/ProfileCatalog.Enrollment.cs" Link="ProfileCatalog.Enrollment.cs" /><Compile Include="../ui/EnrollmentEngine.cs" Link="EnrollmentEngine.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/EnrollmentClient.cs" Link="EnrollmentClient.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/RoutingCheck.cs" Link="RoutingCheck.cs" /><Compile Include="../ui/SystemRoutingCheck.cs" Link="SystemRoutingCheck.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ProfileIdentity.cs" Link="ProfileIdentity.cs" /><Compile Include="../ui/ManagedSync.cs" Link="ManagedSync.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ManagedKnownGood.cs" Link="ManagedKnownGood.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ManagedRecoveryPolicy.cs" Link="ManagedRecoveryPolicy.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ManagedRecovery.cs" Link="ManagedRecovery.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/TransportPolicy.cs" Link="TransportPolicy.cs" /><Compile Include="../ui/TransportManager.cs" Link="TransportManager.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/ProfileSelection.cs" Link="ProfileSelection.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../ui/EffectiveSettings.cs" Link="EffectiveSettings.cs" /></ItemGroup>
+<ItemGroup><Compile Include="../ui/ManagedRouting.cs" Link="ManagedRouting.cs" /><Compile Include="../ui/NetworkRecovery.cs" Link="NetworkRecovery.cs" /></ItemGroup>
+</Project>

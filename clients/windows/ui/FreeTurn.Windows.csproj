@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <WindowsSdkPackageVersion>10.0.17763.57</WindowsSdkPackageVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>FreeTurn.Windows</AssemblyName>
+    <ApplicationIcon>Assets/FreeTurn.ico</ApplicationIcon>
+    <Product>FreeTurn</Product>
+    <Description>FreeTurn VPN для Windows</Description>
+    <Version>0.27.0</Version>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets/*.ttf" />
+    <Resource Include="Assets/FreeTurn.ico" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <PackageReference Include="SSH.NET" Version="2026.0.1" />
+  </ItemGroup>
+</Project>

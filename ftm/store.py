@@ -129,12 +129,20 @@ class Store:
         with self.connect() as db:
             return [dict(row) for row in db.execute("SELECT * FROM users ORDER BY created_at,id")]
 
-    def list_devices(self, user_id=None):
+    def list_devices(self, user_id=None, *, counters=None):
         fields = "id,user_id,name,platform,vpn_type,ip,enabled,state,origin,revision,last_handshake_at,created_at"
+        if counters is not None:
+            fields += ",wg_public_key"
         with self.connect() as db:
             rows = db.execute(f"SELECT {fields} FROM devices" + (" WHERE user_id=?" if user_id else "") + " ORDER BY created_at,id",
                               (user_id,) if user_id else ())
-            return [dict(row) for row in rows]
+            devices = [dict(row) for row in rows]
+        if counters is not None:
+            for item in devices:
+                received, sent, handshake = counters.get(item.pop("wg_public_key"), (None, None, None))
+                item.update(rx_bytes=received, tx_bytes=sent, last_handshake_at=(
+                    datetime.datetime.fromtimestamp(handshake, datetime.timezone.utc).isoformat() if handshake is not None else None))
+        return devices
 
     def list_events(self, limit=100):
         if type(limit) is not int or not 1 <= limit <= 200:

@@ -24,6 +24,7 @@
 # Build and editor files
 __pycache__/
 .venv/
+/.local-cache/
 node_modules/
 /web/dist/
 .idea/
@@ -31,3 +32,10 @@ node_modules/
 
 # Read-only upstream audit checkouts
 /.references/
+
+# Native Windows client build products
+/clients/windows/artifacts/
+/clients/windows/ui/bin/
+/clients/windows/ui/obj/
+/clients/windows/catalog-check/bin/
+/clients/windows/catalog-check/obj/

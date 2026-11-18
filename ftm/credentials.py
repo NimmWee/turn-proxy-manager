@@ -9,7 +9,7 @@ import re
 import secrets
 import uuid
 
-from .store import Store, ValidationError, _now
+from .store import Conflict, Store, ValidationError, _now
 
 
 def _identifier(value):
@@ -29,6 +29,22 @@ def _digest(token, kind):
 class Credentials:
     def __init__(self, store):
         self.store = store
+
+    def list_subscriptions(self, *, page, search):
+        if type(page) is not int or not 1 <= page <= 10_000:
+            raise ValidationError("Invalid subscription page")
+        if not isinstance(search, str) or len(search) > 128 or any(ord(char) < 32 for char in search):
+            raise ValidationError("Invalid subscription search")
+        page_size = 50
+        with self.store.connect() as db:
+            db.create_function("casefold", 1, str.casefold, deterministic=True)
+            rows = db.execute("""SELECT u.id AS user_id,u.name,u.enabled,s.version,s.revoked_at
+                                 FROM users u LEFT JOIN subscriptions s ON s.user_id=u.id
+                                 WHERE instr(casefold(u.name),?) > 0
+                                 ORDER BY casefold(u.name),u.id LIMIT ? OFFSET ?""",
+                              (search.strip().casefold(), page_size + 1, (page - 1) * page_size)).fetchall()
+        return {"items": [dict(row) for row in rows[:page_size]],
+                "has_next": len(rows) > page_size and page < 10_000}
 
     def issue_subscription(self, user_id, *, deliver=None, request_id=None):
         user_id = _identifier(user_id)
@@ -52,10 +68,14 @@ class Credentials:
         # The caller must deliver privately. No list or audit stores plaintext.
         return value
 
-    def revoke_subscription(self, user_id):
+    def revoke_subscription(self, user_id, *, expected_version=None):
         user_id = _identifier(user_id)
+        if expected_version is not None and (type(expected_version) is not int or expected_version < 1):
+            raise ValidationError("Invalid subscription version")
         with self.store.transaction() as db:
-            previous = db.execute("SELECT id,revoked_at FROM subscriptions WHERE user_id=?", (user_id,)).fetchone()
+            previous = db.execute("SELECT id,version,revoked_at FROM subscriptions WHERE user_id=?", (user_id,)).fetchone()
+            if expected_version is not None and (previous is None or previous["version"] != expected_version):
+                raise Conflict("Subscription changed")
             if previous is None:
                 raise ValidationError("Subscription not found")
             if previous["revoked_at"] is None:

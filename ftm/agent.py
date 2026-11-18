@@ -16,9 +16,9 @@ from .legacy import baseline_module, validate_legacy_state
 from .store import Store, Conflict, ValidationError, valid_key, _now
 
 
-def _run(args):
+def _run(args, *, timeout=20):
     try:
-        result = subprocess.run(args, capture_output=True, text=True, timeout=20)
+        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
     except (OSError, subprocess.TimeoutExpired):
         raise RuntimeError("Network operation failed") from None
     if result.returncode:

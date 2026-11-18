@@ -1,0 +1,40 @@
+{
+  "androidReference": {
+    "repository": "https://github.com/hackdiaz-dev/turn-proxy-android",
+    "commit": "bab60c5fb620cbea2570eeeb5a0697dc355071f4",
+    "version": "5.3.4",
+    "license": "GPL-3.0-only"
+  },
+  "core": {
+    "repository": "https://github.com/hackdiaz-dev/free-turn-proxy",
+    "version": "v4.1.5",
+    "commit": "f6b1f25767755d9bf34cbf78818b74c5062d7d0c",
+    "archive": "https://codeload.github.com/hackdiaz-dev/free-turn-proxy/tar.gz/f6b1f25767755d9bf34cbf78818b74c5062d7d0c",
+    "sha256": "8cebcda57d8b7442a8b15a069c4866c9335fa059e040f2b198e3a5c52c2343b7",
+    "directory": "core-windows-v4.1.5"
+  },
+  "wireguardGoModule": "golang.zx2c4.com/wireguard/windows@v1.1.1",
+  "singTunGoModule": "github.com/sagernet/sing-tun@v0.9.6",
+  "wintun": {
+    "archive": "https://www.wintun.net/builds/wintun-0.14.1.zip",
+    "sha256": "07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51",
+    "amd64Sha256": "e5da8447dc2c320edc0fc52fa01885c103de8c118481f683643cacc3220dafce",
+    "licenseSha256": "183adac21e7d96c508c8fd34d394b7b6708bc81564ad1bad61ab66143a008cd2"
+  },
+  "wireguardNT": {
+    "archive": "https://download.wireguard.com/wireguard-nt/wireguard-nt-1.1.zip",
+    "sha256": "dceb30a9bc4be48cce0f74160fc88a585a2c2627366e8f846fc6658f9038dace",
+    "amd64Sha256": "b1b85e072c45d81358be29d94c599dc76652f912be8c0f0a41e2d5d89a6461d3"
+  },
+  "webView2Nuget": "1.0.4314.35",
+  "sshNetNuget": "2026.0.1",
+  "roboto": {
+    "repository": "https://github.com/googlefonts/roboto-2",
+    "commit": "38062f4b4a0be4346d07a928408da21602545e9e",
+    "files": {
+      "Roboto-Bold.ttf": "61f89f8db49261c2f6106e8dccc35df7b2f7ed909020db40a3fc905e95f99334",
+      "Roboto-Medium.ttf": "2879a5ecb7fbfa13a7fc3e2cdd7fecbf73aa45e91b541dfdfa2c442eed0aac21",
+      "Roboto-Regular.ttf": "56a45233d29f11b4dfb86d248e921939d115778f87325e7ae8cc108383d6664d"
+    }
+  }
+}

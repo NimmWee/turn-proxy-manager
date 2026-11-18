@@ -5,6 +5,9 @@ export function setCsrf(value) { csrf = value; }
 
 export async function api(path, options = {}) {
   const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (options.signal?.aborted) abort();
+  options.signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => controller.abort(), 35000);
   try {
     const response = await fetch(`${prefix}/api${path}`, {
@@ -24,5 +27,8 @@ export async function api(path, options = {}) {
   } catch (error) {
     if (error.name === 'AbortError') throw new Error('Сервер отвечает дольше обычного. Попробуйте ещё раз');
     throw error;
-  } finally { clearTimeout(timer); }
+  } finally {
+    clearTimeout(timer);
+    options.signal?.removeEventListener('abort', abort);
+  }
 }

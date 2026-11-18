@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 import uuid
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -88,6 +88,11 @@ class NewDevice(StrictBody):
     request_id: uuid.UUID
 
 
+class RoutingPublish(StrictBody):
+    expected_revision: StrictInt = Field(ge=0)
+    policy: dict
+
+
 class ExportSubscription(StrictBody):
     password: str = Field(min_length=1, max_length=1024, strict=True)
     request_id: uuid.UUID
@@ -96,6 +101,11 @@ class ExportSubscription(StrictBody):
 class ExportBootstrap(ExportSubscription):
     name: str = Field(min_length=1, max_length=128, strict=True)
     platform: Literal['android', 'windows', 'other']
+
+
+class RevokeSubscription(StrictBody):
+    password: str = Field(min_length=1, max_length=1024, strict=True)
+    expected_version: StrictInt = Field(ge=1, le=2**63 - 2)
 
 
 def create_app(config, *, rpc=control.request, static_dir=None):
@@ -207,9 +217,34 @@ def create_app(config, *, rpc=control.request, static_dir=None):
     async def metrics():
         return await invoke("metrics")
 
+    @app.get(prefix + "/api/metrics/history", dependencies=[Depends(session)])
+    async def metrics_history(hours: int = Query(24)):
+        from .metrics_history import RESOLUTION_MINUTES
+        if hours not in RESOLUTION_MINUTES:
+            raise HTTPException(422, "Выберите период мониторинга")
+        return await invoke("metrics.history", {"hours": hours})
+
+    @app.get(prefix + "/api/settings", dependencies=[Depends(session)])
+    async def panel_settings():
+        from .metrics_history import HISTORY_DAYS
+        return {"public_origin": public_origin, "secure_cookie": auth.config["secure_cookie"],
+                "credential_export_enabled": public_origin is not None, "history_days": HISTORY_DAYS}
+
+    @app.get(prefix + "/api/routing", dependencies=[Depends(session)])
+    async def routing_get():
+        return await invoke("routing.get")
+
+    @app.post(prefix + "/api/routing", dependencies=[Depends(mutation)])
+    async def routing_publish(value: RoutingPublish):
+        return await invoke("routing.publish", value.model_dump())
+
     @app.get(prefix + "/api/users", dependencies=[Depends(session)])
     async def users():
         return await invoke("users.list")
+
+    @app.get(prefix + "/api/subscriptions", dependencies=[Depends(session)])
+    async def subscriptions(page: int = Query(1, ge=1, le=10_000), search: str = Query("", max_length=128)):
+        return await invoke("subscriptions.list", {"page": page, "search": search})
 
     @app.get(prefix + "/api/events", dependencies=[Depends(session)])
     async def events():
@@ -229,6 +264,12 @@ def create_app(config, *, rpc=control.request, static_dir=None):
             raise HTTPException(403, 'Выдача доступна только через защищённую панель')
         return await invoke('admin.subscription_export', {'user_id': str(identifier), **value.model_dump(mode='json')})
 
+    @app.post(prefix + '/api/users/{identifier}/subscription-revoke', dependencies=[Depends(mutation)])
+    async def subscription_revoke(identifier: uuid.UUID, value: RevokeSubscription):
+        if not public_origin:
+            raise HTTPException(403, 'Отзыв доступен через защищённую панель')
+        return await invoke('admin.subscription_revoke', {'user_id': str(identifier), **value.model_dump()})
+
     @app.post(prefix + '/api/users/{identifier}/bootstrap-export', dependencies=[Depends(mutation)])
     async def bootstrap_export(identifier: uuid.UUID, value: ExportBootstrap):
         if not public_origin:
@@ -237,7 +278,7 @@ def create_app(config, *, rpc=control.request, static_dir=None):
 
     @app.get(prefix + "/api/devices", dependencies=[Depends(session)])
     async def devices():
-        return await invoke("devices.list")
+        return await invoke("devices.list", {"telemetry": True})
 
     @app.post(prefix + "/api/devices", dependencies=[Depends(mutation)])
     async def new_device(value: NewDevice):

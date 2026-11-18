@@ -18,7 +18,7 @@ class ClientHttpSafetyTests(unittest.TestCase):
         test_client_service.ClientDisclosureTests.setUp(self)
         config = dict(make_config("admin", "synthetic http client phrase"), version=2,
                       public_origin="https://8.8.8.8", secure_cookie=True)
-        rpc = lambda operation, args: execute({"v": 1, "op": operation, "args": args},
+        rpc = lambda operation, args: execute({"v": 1, "op": operation, "args": args or {}},
                                              uid=456, api_uid=456, store=self.store, agent=self.agent)
         self.client = TestClient(create_app(config, rpc=rpc), base_url="https://8.8.8.8")
         self.admin_prefix = "/a/" + config["panel_slug"] + "/api"
@@ -68,3 +68,23 @@ class ClientHttpSafetyTests(unittest.TestCase):
         response = self.client.post(self.base + "enroll", json=self.args, headers={"Authorization": "Bearer ftmu1_" + "x" * 43})
         self.assertEqual(response.status_code, 429)
         self.assertEqual(response.headers["retry-after"], "60")
+
+    def test_routing_requires_capability_device_auth_and_admin_csrf(self):
+        prefix=self.admin_prefix
+        self.assertEqual(self.client.get(prefix+"/routing").status_code,401)
+        login=self.client.post(prefix+"/auth/login",json={"username":"admin","password":"synthetic http client phrase"},headers={"Origin":"https://8.8.8.8"})
+        self.assertEqual(login.status_code,200)
+        policy=self.client.get(prefix+"/routing").json()
+        body={"expected_revision":policy["revision"],"policy":policy["policy"]}
+        self.assertEqual(self.client.post(prefix+"/routing",json=body).status_code,403)
+        headers={"Origin":"https://8.8.8.8","X-CSRF-Token":login.json()["csrf"]}
+        self.assertEqual(self.client.post(prefix+"/routing",json=body,headers=headers).status_code,200)
+        self.assertEqual(self.client.post(prefix+"/routing",json=body,headers=headers).status_code,409)
+        self.service.enroll(self.link,self.args);reconcile(self.store,self.agent)
+        bearer={"Authorization":"Bearer "+self.token}
+        self.assertEqual(self.client.get(self.base+"routing",headers=bearer).status_code,422)
+        delivered=self.client.get(self.base+"routing",headers={**bearer,"X-FreeTurn-Capability":"routing-bundle-v1"})
+        self.assertEqual(delivered.status_code,200)
+        self.assertEqual(delivered.json()["revision"],1)
+        self.store.revoke_device(self.service.status(self.token)["device_id"])
+        self.assertEqual(self.client.get(self.base+"routing",headers={**bearer,"X-FreeTurn-Capability":"routing-bundle-v1"}).status_code,403)

@@ -18,6 +18,8 @@ const paths = {
   download: <><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></>,
   upload: <><path d="M12 15V3m-5 5 5-5 5 5M5 17v4h14v-4"/></>,
   lock: <><rect x="4" y="10" width="16" height="12" rx="3"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 15v2"/></>,
+  key: <><circle cx="8" cy="9" r="4"/><path d="m11 12 8 8m-2-2 2-2m-5-1 2-2"/></>,
+  settings: <><path d="M4 6h16M4 12h16M4 18h16"/><path d="M9 3v6m6 0v6m-6 0v6"/></>,
   menu: <path d="M4 6h16M4 12h16M4 18h16"/>, info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></>,
   eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></>,
 };

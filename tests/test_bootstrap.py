@@ -72,6 +72,24 @@ class BootstrapSafetyTests(unittest.TestCase):
             self.claim()
         self.assertEqual(error.exception.status, 410)
 
+    def test_expired_nonce_does_not_revoke_committed_device_token(self):
+        self.issue()
+        accepted = self.claim()
+        self.now += datetime.timedelta(hours=2)
+        with self.assertRaises(ClientFault) as error:
+            self.claim()
+        self.assertEqual(error.exception.status, 410)
+        status = self.service.status(self.token)
+        self.assertEqual(status, {"device_id": accepted["device_id"], "state": "active",
+                                  "revision": accepted["revision"], "ready": True, "retry_after_seconds": 0})
+        with self.store.connect() as db:
+            rows = db.execute('SELECT token_hash FROM device_tokens WHERE device_id=?', (self.device['id'],)).fetchall()
+        self.assertEqual([row[0] for row in rows], [_digest(self.token, 'device')])
+        self.credentials.revoke_device_credential(self.device['id'])
+        with self.assertRaises(ClientFault) as error:
+            self.service.status(self.token)
+        self.assertEqual(error.exception.status, 401)
+
     def test_competing_claims_commit_exactly_one_credential(self):
         self.issue()
         def attempt(token):

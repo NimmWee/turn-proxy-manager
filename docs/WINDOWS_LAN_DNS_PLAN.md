@@ -1,0 +1,31 @@
+# Windows0.11: приватность cache и локальные имена
+
+17.11.2026. Продолжение ночного поручения, без субагентов.0.9/0.10 ZIP сохраняются; новый код отдельной версией. Реальный VPN/TUN/WFP, обновление служб и VPS запрещены. Дедлайн07:00 Томск/00:00 UTC. Требования уже согласованы в ТЗ§6.1; новых внешних данных/дизайн-ответов для этого локального блока не нужно.
+
+## Решение до реализации
+
+Повторная сверка ТЗ выявила важную границу: не вести персональную историю посещений/DNS. Operational cache0.10 сохраняет encrypted hostname→IP без времени/пользователя, но долговременный набор имён избыточен.0.11 должен сохранять только keyed HMAC identity→fake-IP, без hostname/URL/query timestamps/counts. Cipher key остаётся в DPAPI, HMAC key отделяется HKDF. Долговременные имена удаляются из рабочего формата; текущие session names только в памяти. Legacy v1 migration атомарно переписывает валидный journal с теми же IDs/key/high-water mark; не reset/reuse. Старый0.10 — исторический checkpoint, для новых проверок предпочитать исправленную0.11.
+
+Рассмотрены: оставить encrypted names (быстрый reconnect, избыточная история — отклонено); сохранять только monotonic counter (нет имён, но частые reconnect быстро расходуют пул — отклонено); opaque HMAC index + volatile names (выбрано). После reconnect stale fake IP без свежего DNS не должен получить чужой hostname. Для TCP допустимо восстановить имя из ограниченного TLS ClientHello SNI/HTTP Host **до remote dial**, только если HMAC совпал с сохранённым ID. Буфер не журналируется/не сохраняется и передаётся без изменения; TLS interception нет. Скрытый ECH/unknown UDP/server-first без имени — fail closed до нового DNS query; не угадывать имя/IP.
+
+Для LAN рассмотрены: broad physical bypass/mDNS firewall allow (не делать без узкого дизайна/OS-проверки); NRPT/registry (лишние machine изменения, не первый шаг); собственный interface-bound local unicast DNS (выбрано как ограниченный подэтап). Single-label/home.arpa/lan/home/internal/corp/intranet/test — только private resolver, который уже настроен на выбранном physical interface и находится on-link. Metadata/VPS/private management/public resolvers исключаются. Никакого fallback в public DNS/VPN DNS, даже при выключенном splitDNS. Local A отдавать настоящими private IPv4, не добавляя private names в durable fake index. localhost обслуживается локально, invalid/onion/alt отказ. CNAME/public answers/private metadata фильтровать. mDNS .local пока не обещать: RFC6762 использует отдельный link-local multicast/5353, Windows multi-homed resolution сложнее DNS/53; WFP не расширять.
+
+Источники: [RFC8375](https://www.rfc-editor.org/rfc/rfc8375.html) — home.arpa не уходит за локальную сеть; [RFC6762](https://www.rfc-editor.org/rfc/rfc6762.html) — mDNS отдельный multicast; [Microsoft DNS policy](https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-admx-dnsclient) — multi-homed DNS/LLMNR/NetBT. Вывод об ограниченном unicast подэтапе — инженерное решение по этим ограничениям, не подтверждённый Windows E2E.
+
+## Проверки и поставка
+
+1. Opaque cache reopen/migration/key separation/no plaintext names, truncation/refusal/never reuse. TCP identity recovery mismatch/oversize/timeout не выполняет remote dial; правильный payload не меняется.
+2. Private DNS eligible servers/zero public fallback, CNAME и metadata, LAN off/refusal, отсутствие private identities в durable index. In-memory working scenario достаточно; настоящая LAN/mDNS — NOT RUN.
+3. Сборка, existing crypto/backup/interop/UI сценарии по необходимости;0.11 пакет/manifest/source correspondence. Не перепроверять всё без причины. Обновить статусы и NEXT перед передачей.
+
+## Реализованный код,22:05 UTC — ещё до упаковки
+
+Opaque v2 journal, HKDF-separated HMAC key и atomic legacy migration написаны. Replay не восстанавливает имена/route decisions/IP answers. Новая DNS lookup сохраняет прежний fake-IP по HMAC; TCP восстановление использует стандартный TLS ClientHello parser или bounded HTTP header, максимум16KiB/2s, до remote dial. Несовпадение/UDP без имени закрываются. Приватные имена обслуживаются отдельным interface-bound local DNS путём, только configured private on-link servers, без публичного fallback; private A не попадает в durable cache. Public→private CNAME и private→public CNAME отклоняются; localhost локально, .local/mDNS отказ. В status только LocalDNSReady/агрегированные счётчики, без имён или адресов DNS.
+
+Targeted actual CurrentUser DPAPI/AES v2 reopen/migration/key/IP/high-water preservation, MAC/boundary truncation/write refusal, HTTP/SNI recovery/mismatch/oversize и local DNS no-fallback/metadata/LAN-off/eligibility checks PASS. Полный Go with_gvisor test/vet PASS. Один предыдущий полный прогон дал timeout старого spoofed-pipe теста; отдельный повтор10/10 и следующий полный прогон PASS, причина нестабильности не установлена, сетевой код ради этого не менялся. Это не SYSTEM/TUN/WFP/LAN E2E: настоящие службы/маршруты/VPS не затронуты. Полная поставка0.11 и UI проверки — следующий шаг.
+
+Граница: private A возвращает реальный IPv4. BLOCK для имени проверяется в DNS, но доступ по ранее известному/hardcoded private IP управляется общим LAN toggle; per-flow hostname binding для таких LAN адресов не обещается. ECH/QUIC/server-first после reconnect без свежего DNS fail closed. Нативный mDNS, смена физической сети, IPv6 и app matching остаются отдельными задачами.
+
+## Проверенный пакет0.11
+
+`clients/windows/artifacts/FreeTurn-Windows-0.11.0-preview-win-x64.zip`:86.01MiB,16 entries/15 payload SHA,141 corresponding sources,81 notices. SHA256 `3a72169c12b781af8c225c65f839b3f6b5a6cc769b9fa30e0114afdd57344f16`. Go with_gvisor test/vet и no-tag test PASS; Release publish без warnings/errors. Catalog crypto/backup/key preservation и C#→Go inactive preview contract PASS. Native synthetic single-window/nested/busy/close/WebView PASS, servicesUsed=false/networkChanged=false. Component420×740 dark/light lower render просмотрены, поля/описание/действия не обрезаны. Offline guards/import/previews PASS, routes/adapters/services digest неизменён; read-only preflight распознал другой VPN/nonphysical uplink и отказал. Новая SYSTEM служба не установлена/не запускалась.0.9/0.10 SHA проверены, неизменны. Следующая задача — managed contracts/Windows integration, отдельной версией; этот ZIP не перезаписывать.

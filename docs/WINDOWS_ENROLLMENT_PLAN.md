@@ -1,0 +1,37 @@
+# Windows0.14: регистрация устройства из постоянного доступа
+
+17.11.2026. Продолжение по поручению пользователя, без субагентов. Рабочая область — clients/windows и документы текущего результата; API/schemas/ftm/vendor, VPS, службы/маршруты ПК и GitHub не менять.0.13 ZIP заморожен. Применяются brainstorming/writing-plans; enrollment уже предусмотрен ТЗ и следующим шагом0.13, повторное разрешение не требуется.
+
+## Контракт и решение
+
+Действующий admin export — строго `{version:1,format:"ftm-enrollment",origin,user_token}`. Поддержать JSON и локальную текстовую обёртку `ftm-enroll://<base64url JSON>` для вставки в приложение; это не HTTP endpoint, token никогда не передавать в query/path реального HTTPS. Обёртка не меняет серверный формат и не регистрируется в ОС установщиком этого блока. UI панели/Android не менять; совместимость URI можно добавить там отдельно по опубликованной обёртке.
+
+Ключи: рассмотрены новая crypto-библиотека C#, временный фальшивый профиль для reuse update builder и existing Go conf key generator + общий manifest validator. Выбрано последнее: pure child IPC создаёт/проверяет WG keypair; first manifest собирается общим проверенным validator с локальным private key, без fake connected profile. Добавить отдельный initial builder с обязательным исходным ClientID; refresh продолжает брать private key только из текущего share.
+
+Поток: import→страница регистрации→явное начало. До первого HTTP записать PendingEnrollment в тот же atomic CurrentUser DPAPI snapshot: private/public key, device token, source digest, ClientID, request UUID, имя и user token. Одна локальная попытка на origin+user digest; повторное открытие/ошибка/потеря ответа не генерируют новые keys/UUID/CID/token и не меняют отправленное имя. Ответ enroll200/202 с canonical device ID фиксирует ack и очищает raw user token; далее GET subscription по device token. Pending202 — ручная проверка готовности, без retry storm/таймеров. Lost POST response — повтор того же UUID/body/token. Готовый manifest проверяется по key/device/origin/CID/ETag до atomic add real profile + remove pending; current profile/selection/активный VPN не трогать. Профиль выбирается обычным существующим действием после регистрации. Успешный профиль хранит только source digest для защиты от повторной регистрации с той же ссылкой; raw user token не нужен.
+
+HTTPS по умолчанию к public canonical IPv4 origin:443, default TLS validation, no redirects/proxy/cookies/HTTP3, fixed numeric destination/no resolver. Только explicit click. Дополнительный явный «Через уже подключённый FreeTurn» использует прежний internal10.77.43.1:443 и требует authenticated connected state. Public/internal не переключаются автоматически. Если public HTTPS недоступен и рабочего VPN нет, остаётся существующий персональный bootstrap JSON; отсутствие сети не обходить.
+
+Pending данные ограничены16 записями/размером каталога, скрыты в ToString/log/errors. Backup/merge обязаны сохранять попытки/credential binding; конфликт одного request/source с другими ключами — отказ до записи. Completed managed profile при restore не заменяется старой pending записью. Обычные профили/0.13 metadata читаются без миграции ключей; новые enrollment metadata требуют0.14+. Не добавлять удаление незавершённых ключей без отдельного явного сценария.
+
+## Выполнение и приёмка
+
+- [x] Pure Go keygen/keypair-origin check/initial manifest assembly; security tests key/device/CID/origin binding, existing refresh regression.
+- [x] Strict C# JSON/URI parser и DPAPI pending identity, idempotent start/ack/complete, backup/merge guards.
+- [x] Bounded enrollment/subscription requests, public/internal numeric TLS transport; tests lost response→restart→same request,202→ready, token/private key not in body.
+- [x] Existing single-window UI import/continue/статусы, build/render/native synthetic workflow и no-network digest.
+- [x]0.14 ZIP/source hashes, progress/remaining docs. Live HTTPS/enrollment/reconcile/VPN/CAPTCHA/leaks NOT RUN; выполняет пользователь.
+
+Не включать в этот блок periodic sync, automatic Direct↔Relay, runtime egress LKG/rollback, серверные изменения или Android. Локальный crypto/DPAPI/Go interop отделять от fake HTTP и настоящего E2E.
+
+## Реализовано и проверено17.11
+
+Готов `clients/windows/artifacts/FreeTurn-Windows-0.14.0-preview-win-x64.zip`:86.12MiB,16 entries/15 payload SHA/166 source files/81 notices. SHA256 `447019330b0e25a88303d64b1fc751eeb926ea208b4ffcb3fb1629c943b55967`. Payload hashes и каждый corresponding source сопоставлены checkout.0.13 заморожен неизменным; API/schemas/ftm/vendor не менялись, новых зависимостей нет.
+
+Работает JSON + strict canonical base64url wrapper, explicit clipboard copy только по нажатию, public IPv4/TLS origin fence. Keygen/derive/first manifest используют Go и общий0.13 validator, исходный ClientID обязателен, revision не ниже acknowledgment. Pending DPAPI identity фиксируется до сети; Attempted marker позволяет после перезапуска сначала проверить device credential. Lost response при committed server state восстанавливается даже без повторного user-token POST; при отсутствии commit повторяется byte-identical POST с тем же UUID/key/CID/token/name. Ack очищает user token в текущем snapshot.202 сохраняет pending; state:error даёт отдельное сообщение администратора. Готовый профиль добавляется атомарно с удалением pending, без выбора/импорта в SYSTEM и без VPN startup.
+
+Backup/merge сохраняет pending ключи и acknowledged state; конфликт одного незавершённого request/source не переписывает credentials. Completed профили разных устройств могут иметь общий source digest (например, после явного restore с другого ПК); они не перезаписываются из-за общей семейной ссылки. На этом ПК новый Begin по уже использованной ссылке не создаёт ещё одно устройство. Pending ключи не удаляются UI произвольно. Старые encrypted backup/.previous сохраняют прежнее состояние и не являются гарантией безусловного отзыва.
+
+**PASS:** Go tests/vet/build, реальный keygen/derive/CID/key/device/origin fences; Python actual server schema/canonical Unicode ETag/to_share ↔ Go для refresh и first enrollment; CurrentUser DPAPI/backup/idempotency/ack/identity conflict checks; fake HTTP lost reply с committed/uncommitted состояниями, restart,202→ready с **actual Go keygen/validator/builder**. Есть отдельный полностью synthetic builder прогон, он не назван E2E. WPF Release build/publish0 warnings/errors; native single-window/nested/busy/close/WebView scenario с новой страницей PASS. Dark/light420×740 top/lower component renders просмотрены; список регистраций приведён к существующей теме, горизонтального обрезания действий нет. Offline key/bootstrap/routing/foreground guards PASS, routes/adapters/services digest неизменён. Baseline23 SHA и оригинальный package verifier PASS. Самопроверка — самостоятельно, без субагентов.
+
+**NOT RUN:** настоящее trusted TLS enrollment/reconcile/new CID FreeTurn authorization, получение профиля из реального API, VPN/egress/leaks/CAPTCHA/sleep/crash/phone compatibility этой версии. Установленные службы, реальные профили/iPhone, VPS и GitHub не затронуты. Транспорт к public origin может использовать текущую сетевую конфигурацию пользователя; программа не отключает чужой VPN и не создаёт physical bypass. Public/internal не переключаются автоматически. Custom domain/private management networks/OS URI association остаются будущей совместимостью; текущий server baseline — public IPv4 и10.77.43/24.

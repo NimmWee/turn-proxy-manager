@@ -1,0 +1,39 @@
+# Windows: персональный bootstrap и managed connection
+
+17.11.2026, ночное поручение до07:00 Томск. Без субагентов, редизайна, VPS/production/GitHub и реального VPN/обновления служб на этом ПК.0.9/0.10/0.11 ZIP сохранить. Авторизованная задача по ТЗ§managed/этап4: связать уже проверенный серверный контракт с Windows. Фактические серверные контракты: BOOTSTRAP.md, CLIENT_API.md, ftm/reference_client.py, ftm/managed_profile.py и schemas/*.json.
+
+## Выбранный первый блок0.12
+
+Сначала персональный ftm-bootstrap v1 из панели: offline import→DPAPI storage→ручное подключение обычным существующим путём→явная активация управления через VPN. Это даёт рабочий native вход без нового enrollment/ротации peer keys. Public user URL/enrollment с генерацией новой пары, periodic refresh/LKG/apply и Direct↔Relay failover — следующие отдельные блоки; не выдавать импорт/claim за готовый Connection Manager.
+
+Проверка envelope строго до записи: версия/точные поля/duplicate keys/size, canonical UUID/token/expiry, public HTTPS IPv4 origin из действующей схемы, только baseline internal10.77.43.1, полный native profile и соответствие derived WG public key заявленному. Peer host должен совпадать origin. Никаких unknown extensions в native share. Проверка ключей — pure Go CLI рядом с приложением, без служб/сети; наружу только ok/error. TTL относится к claim, не к работоспособности VPN: просроченный файл можно сохранить как подключение, активация должна объяснить expiry.
+
+Bootstrap metadata и один случайный ftmd1 token сохраняются в **том же atomic CurrentUser DPAPI каталоге** вместе с профилем до первого claim. Серверу отправляются nonce и domain-separated SHA256 device token; сам device token/ключи не отправляются в claim body. Retry потерянного ответа сохраняет тот же token/hash. Повторный импорт того же device/origin не перезаписывает уже сохранённый token/состояние/профиль. Clone/edit не должны незаметно дублировать managed identity; обычные старые профили/backup совместимы. Backup содержит credentials только внутри существующего AES-GCM envelope; merge не заменяет действующие credentials повторно импортированными.
+
+Явная кнопка «Управление» в существующих серверах открывает InAppPage. Активация требует authenticated service state connected. HTTPS использует public origin как TLS identity/Host, но socket destination фиксирован10.77.43.1:443; validation certificates штатная, redirects/proxy/cookies отключены. Никакого fallback на public host/иной origin, нового WFP bypass/route/NRPT. До клика и при startup/import сеть не вызывается. Ошибки отображаются static RU codes; response/request exception bodies и секреты не журналируются. Bounded15s/body64KiB, cancellation при закрытии/guard busy. Только matching device_id/claimed response отмечает registration; ошибка сохранения позволяет безопасный retry того же hash. Успех очищает nonce в current snapshot; .previous/backup могут содержать encrypted старое состояние и не дают гарантии отзыва на сервере.
+
+Транспорт сверён с первичными [.NET ConnectCallback](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.connectcallback?view=net-8.0) и [AllowAutoRedirect](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclienthandler.allowautoredirect?view=net-8.0). HTTP/1.1 exact выбран намеренно: ConnectCallback не действует на QUIC/HTTP3. Сертификат/hostname проверяет обычный SocketsHttpHandler; callback меняет только TCP destination. Это код/design, не live TLS proof.
+
+## Проверки
+
+Targeted key/origin/device binding, tamper/duplicate/size/expiry, idempotent import/token persistence до отправки, backup/merge и Lost-response retry; fake HTTP handler для статусов/no-redirect handling и bounded body. Тест transport construction/binding отдельно от mock HTTP. Сборка и synthetic native single-window scenario; никакого live claim/VPN. Реальный SYSTEM/TLS/internal-route/VK bootstrap при закрытом внешнем443 — NOT RUN, выполняет пользователь.
+
+## Далее
+
+После проверенного блока — strict managed manifest validator/local share assembly с сохранением ключа, ETag/LKG и отказом от rollback/device/origin/key substitution; применить лишь при следующем ручном подключении, без разрыва активного. Затем initial enrollment и измеряемый Direct↔Relay Connection Manager. Deadline не расширять ради завершения; незаконченный код чётко пометить WIP, текущую проверенную0.11 оставить доступной.
+
+## Код0.12 до финальной упаковки,22:20 UTC
+
+Pure `--check-bootstrap` с WG public-key derivation/origin binding, JSON/file/clipboard import и duplicate-device idempotency реализованы. ManagedCredential хранится вместе с native share в atomic CurrentUser DPAPI; generated token записан до запроса. Clone/edit managed identity блокируются; обычное переименование/SSH остаются. Backup roundtrip и merge сохраняют действующий token/claimed state, включая добавление metadata к уже существующему raw share. Null metadata не сериализуется; обычные профили сохраняют прежний формат. **Каталог с managed metadata требует0.12+**: старые preview с strict unknown-field reader его не читают; автоматический downgrade каталога не реализован, файл/ключи остаются на месте. Проверенные старые ZIP сохраняются как checkpoints, не как обещание миграции назад.
+
+Новая InAppPage «Серверы → Управление» выполняет explicit claim после authenticated connected state. Exact HTTP1.1, фиксированный internal socket10.77.43.1:443, public TLS identity, default certificate verification, no redirects/proxy/cookies/fallback. Response body/header/time ограничены. Matching device/state/ready и неизменившийся credential/share обязательны до commit; ошибка/потеря ответа сохраняет token для retry. После успеха nonce убирается из текущего snapshot. Никаких auto network calls или применения профиля при импорте.
+
+Фактически PASS: Go key/origin/duplicate/field tamper; C# DPAPI/token-before-send/import retry/backup merge/key preservation/managed edit refusal; fake HTTP lost-response→same-token retry/wrong-device/connected gate; actual C#→Go bootstrap validator; transport settings и pure internal-target/origin fence. WPF Release build0 warnings/errors и native single-window с новой страницей PASS. Это **mock HTTP + actual local crypto/CLI/UI**, не настоящий claim/TLS/VPN E2E.
+
+Один combined offline/native UI прогон дал state-digest mismatch; причина прошлого изменения не установлена. Следующие два отдельных offline прогона PASS/unchanged digest; gate не ослаблялся, verifier теперь сообщает только категорию изменения без адресов. Настоящие службы/VPN не запускались/не обновлялись. Финальная source-correspondence упаковка0.12 ещё впереди;0.11 остаётся замороженным проверенным архивом.
+
+## Финальная передача после ночного окна
+
+0.12 собран16.11 в22:18 UTC/17.11 в05:18 Томск. ZIP86.03MiB,16 entries/15 payload hashes/147 sources/81 notices; SHA256 `5519881b3623dc120b4ac3a67cae697d088424ccad546a54cc63bb66aa9ef0ee`. При утренней read-only проверке hashes и все corresponding sources PASS/mismatches0. Build/test/vet, catalog crypto/merge и actual C#→Go validation с synthetic HTTP claim PASS. Native single-window0.12 PASS до последнего изменения synthetic fixture; финальный ZIP после упаковки UI повторно не запускался. Реальные TLS/internal routing/bootstrap/VK/claim/VPN/OS leak E2E NOT RUN. Более ранняя запись «упаковка впереди» выше историческая, закрыта этой проверкой.
+
+Ночное разрешение закончилось07:00 Томск. Продолжение реализации остановлено; утренние действия ограничены чтением/проверкой пакета и этой передачей. Automation при delete оказалась уже отсутствующей. Готовы0.11 privacy/LAN и0.12 bootstrap/import/claim; **не готовы** managed subscription refresh/ETag/LKG/native enrollment и автоматический Direct↔Relay failover. Следующий блок начинать только по новому поручению. Существующие реальные профили/ключи/службы, VPS и GitHub не изменялись.

@@ -1,0 +1,37 @@
+{
+  "v": 1,
+  "notes": "Pinned DB-IP Lite RU IPv4 geolocation estimate, not precise physical location. No runtime downloads.",
+  "compiled": {
+    "catalog.json": "199db1b643f43214fe0988cd1cfb3e7a12fcc3c229c3351046d2fc020bd96e70",
+    "LICENSES.txt": "6c1a366211388d12c6e9f03278c15a54b0d943d3aa9b69015aa59d403dec6e72",
+    "sources.zip": "8dd3b7d35ebdebbb67f38a196231f8cbd781f8efed7b463f158a8876e4d305ba"
+  },
+  "sources": {
+    "v2fly": {
+      "url": "https://codeload.github.com/v2fly/domain-list-community/tar.gz/41504eae2a11f305fe88cfc605cf6c105a80bf5a",
+      "cacheFile": "v2fly.tar.gz",
+      "sha256": "f1b947f40dbf892166c8673cbcbce0c038ef6c2119e1defdedc7739e99f0a891"
+    },
+    "dbipCountry": {
+      "url": "https://download.db-ip.com/free/dbip-country-lite-2026-11.csv.gz",
+      "cacheFile": "dbip-country-lite-2026-11.csv.gz",
+      "sha256": "e5c8459d638a272ece7f4d7cfa49dce18d91b4f403f6940ba9249bf0db3781fd",
+      "uncompressedSHA256": "5e968a64a29b973f794c5abc46d0711a0ba87c8a16c411e1cd70312db7a5d4e1",
+      "publisherUncompressedSHA1": "e2061015c43ec91c94a12191a6a613279eb94c0c",
+      "records": 732796
+    },
+    "geoIPLicense": {
+      "url": "https://creativecommons.org/licenses/by/4.0/legalcode.txt",
+      "cacheFile": "CC-BY-4.0.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411"
+    }
+  },
+  "geoIP": {
+    "provider": "DB-IP Lite",
+    "release": "2026-11",
+    "country": "RU",
+    "license": "CC-BY-4.0",
+    "attribution": "IP Geolocation by DB-IP",
+    "url": "https://db-ip.com/"
+  }
+}

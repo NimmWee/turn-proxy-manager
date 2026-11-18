@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS metrics_samples(
  ts TEXT PRIMARY KEY, cpu_pct REAL, mem_bytes INTEGER,
  rx_bytes INTEGER, tx_bytes INTEGER, vpn_peers_active_estimate INTEGER
 ) STRICT;
+CREATE TABLE IF NOT EXISTS routing_publication (id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,policy TEXT NOT NULL,catalog TEXT) STRICT;
 INSERT OR IGNORE INTO settings VALUES('subnet','10.77.43.0/24');
 INSERT OR IGNORE INTO settings VALUES('next_ip','10');
 INSERT OR IGNORE INTO migration_versions VALUES(1,strftime('%Y-%m-%dT%H:%M:%fZ','now'));

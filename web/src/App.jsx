@@ -1,9 +1,21 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api, setCsrf } from './api';
 import ExportForm from './ExportForm';
+import RoutingPanel from './RoutingPanel';
+import { Monitoring, Settings, Subscriptions, Transport } from './AdminSections';
 import { Badge, Brand, Chart, DeviceBadge, Empty, Icon, Modal, ThemeButton, bytes, platformName, uptime } from './components';
 
-const sections = { overview: { label: 'Обзор', icon: 'grid' }, users: { label: 'Пользователи', icon: 'users' }, devices: { label: 'Устройства', icon: 'devices' }, events: { label: 'Журнал', icon: 'clock' } };
+const sections = {
+  overview: { label: 'Обзор', icon: 'grid', description: 'Подключения и состояние сервера.' },
+  users: { label: 'Пользователи', icon: 'users', description: 'Доступ к серверу для семьи и близких.' },
+  devices: { label: 'Устройства', icon: 'devices', description: 'Отдельное подключение для каждого телефона и компьютера.' },
+  subscriptions: { label: 'Подписки', icon: 'key', description: 'Выдача, замена и отзыв ссылок регистрации.' },
+  transport: { label: 'VPN и транспорт', icon: 'server', description: 'Состояние интерфейса и служб на сервере.' },
+  routing: { label: 'Маршрутизация', icon: 'shield', description: 'Доставка правил DNS и маршрутизации управляемым клиентам.' },
+  monitoring: { label: 'Мониторинг', icon: 'activity', description: 'Нагрузка, доступное место и активность подключений.' },
+  events: { label: 'Журнал', icon: 'clock', description: 'Изменения доступа и подключения устройств.' },
+  settings: { label: 'Настройки', icon: 'settings', description: 'Доступ к панели и оформление.' },
+};
 
 const eventNames = { 'bootstrap.issue': 'Выдан стартовый профиль', 'bootstrap.claim': 'Стартовый профиль активирован', 'user.create': 'Добавлен пользователь', 'user.enable': 'Пользователь включён', 'user.disable': 'Пользователь отключён', 'device.create': 'Добавлено устройство', 'device.enroll': 'Устройство зарегистрировано', 'device.revoke': 'Запрошен отзыв доступа', 'device.applied': 'Доступ устройству открыт', 'device.revoked': 'Доступ устройству отозван', 'credential.issue': 'Выпущен ключ доступа', 'credential.revoke': 'Ключ доступа отозван', 'subscription.issue': 'Создана подписка', 'subscription.rotate': 'Ссылка подписки заменена', 'subscription.revoke': 'Ссылка подписки отозвана', 'legacy.import': 'Исходные подключения добавлены', 'legacy.adopt': 'Подключения приняты под управление' };
 
@@ -106,13 +118,32 @@ function Devices({ data, search, showDisabled, action, newDevice }) {
   const users = Object.fromEntries(data.users.map(user => [user.id, user]));
   const devices = data.devices.filter(device => (showDisabled || device.enabled) && `${device.name} ${users[device.user_id]?.name || ''} ${device.ip}`.toLowerCase().includes(search.toLowerCase()));
   if (!devices.length) return <section className="surface"><Empty title={search ? 'Устройства не найдены' : 'Пока нет устройств'} action={!search && <button className="button primary" onClick={newDevice}><Icon name="plus" size={16}/>Добавить устройство</button>}>{search ? 'Попробуйте другое имя или адрес.' : 'Добавьте устройство для одного из пользователей.'}</Empty></section>;
-  return <section className="surface table-surface"><div className="table-scroll"><table className="devices-table"><thead><tr><th>Устройство</th><th>Пользователь</th><th>Адрес</th><th>Состояние</th><th className="align-right">Действие</th></tr></thead><tbody>{devices.map(device => <tr key={device.id}><td><div className="person-cell"><span className="device-tile"><Icon name="devices"/></span><div><strong>{device.origin === 'legacy' && device.name === 'iphone' ? 'iPhone' : device.origin === 'legacy' && device.name === 'android' ? 'Android' : device.name}</strong><span className="cell-subtitle">{platformName[device.platform]} · WireGuard</span></div></div></td><td>{users[device.user_id]?.name || '—'}</td><td className="mono">{device.ip}</td><td><DeviceBadge device={device}/></td><td className="align-right"><button className={`button small ${device.enabled ? 'secondary' : 'primary-soft'}`} disabled={!device.enabled && !users[device.user_id]?.enabled} title={!device.enabled && !users[device.user_id]?.enabled ? 'Сначала включите пользователя' : undefined} onClick={() => action({ kind: 'devices', item: device, enabled: device.state === 'error' && device.enabled ? true : !device.enabled })}>{device.state === 'error' && device.enabled ? 'Повторить' : device.enabled ? 'Отключить' : 'Включить'}</button></td></tr>)}</tbody></table></div></section>;
+  return <section className="surface table-surface"><div className="table-scroll"><table className="devices-table">
+    <thead><tr><th>Устройство</th><th>Пользователь</th><th>Адрес</th><th>Состояние</th><th>Трафик VPN</th><th className="align-right">Действие</th></tr></thead>
+    <tbody>{devices.map(device => {
+      const name = device.origin === 'legacy' && ['iphone', 'android'].includes(device.name)
+        ? (device.name === 'iphone' ? 'iPhone' : 'Android') : device.name;
+      const handshake = device.last_handshake_at && Number.isFinite(Date.parse(device.last_handshake_at))
+        ? new Date(device.last_handshake_at).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : 'нет данных';
+      const userEnabled = users[device.user_id]?.enabled;
+      const retry = device.state === 'error' && device.enabled;
+      return <tr key={device.id}>
+        <td><div className="person-cell"><span className="device-tile"><Icon name="devices"/></span><div><strong>{name}</strong><span className="cell-subtitle">{platformName[device.platform]} · {device.vpn_type === 'awg' ? 'AmneziaWG' : 'WireGuard'}</span></div></div></td>
+        <td>{users[device.user_id]?.name || '—'}</td>
+        <td className="mono">{device.ip}</td>
+        <td><DeviceBadge device={device}/><span className="cell-subtitle">Последний handshake · {handshake}</span><span className="cell-subtitle">Ревизия на сервере · {device.revision ?? '—'}</span></td>
+        <td className="device-traffic"><span>Получено {bytes(device.rx_bytes)}</span><span>Отправлено {bytes(device.tx_bytes)}</span></td>
+        <td className="align-right"><button className={`button small ${device.enabled ? 'secondary' : 'primary-soft'}`} disabled={!device.enabled && !userEnabled} title={!device.enabled && !userEnabled ? 'Сначала включите пользователя' : undefined} onClick={() => action({ kind: 'devices', item: device, enabled: retry || !device.enabled })}>{retry ? 'Повторить' : device.enabled ? 'Отключить' : 'Включить'}</button></td>
+      </tr>;
+    })}</tbody>
+  </table></div></section>;
 }
 
 export default function App() {
   const [dark, setDark] = useState(() => localStorage.getItem('ftm-theme') ? localStorage.getItem('ftm-theme') === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [auth, setAuth] = useState(null), [starting, setStarting] = useState(true), [section, setSection] = useState('overview');
   const [data, setData] = useState(null), [samples, setSamples] = useState([]), [refreshing, setRefreshing] = useState(false), [dataError, setDataError] = useState('');
+  const [sectionRevision, setSectionRevision] = useState(0);
   const [search, setSearch] = useState(''), [showDisabled, setShowDisabled] = useState(false), [modal, setModal] = useState(null), [toast, setToast] = useState(''), [menu, setMenu] = useState(false);
   const fetching = useRef(false), epoch = useRef(0);
   useEffect(() => { document.documentElement.classList.toggle('dark', dark); localStorage.setItem('ftm-theme', dark ? 'dark' : 'light'); }, [dark]);
@@ -127,24 +158,34 @@ export default function App() {
   useEffect(() => { if (!auth) return; load(); const timer = setInterval(load, 15000); return () => clearInterval(timer); }, [auth, load]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 5000); return () => clearTimeout(timer); }, [toast]);
   function navigate(value) { setSection(value); setSearch(''); setShowDisabled(false); setMenu(false); }
-  async function done(message) { setModal(null); setToast(message); await load(); }
+  function refresh() { setSectionRevision(current => current + 1); return load(); }
+  async function done(message) { setModal(null); setToast(message); await refresh(); }
   async function logout() { try { await api('/auth/logout', { method: 'POST' }); epoch.current += 1; setAuth(null); setData(null); setSamples([]); setCsrf(null); } catch (error) { setToast(error.message); } }
   if (starting) return <div className="startup"><Brand/><Icon name="refresh" className="spinning"/></div>;
   if (!auth) return <LoginPage onLogin={value => { epoch.current += 1; setAuth(value); }} dark={dark} toggleTheme={() => setDark(!dark)}/>;
   const title = section === 'overview' ? 'Обзор сервера' : section === 'events' ? 'Журнал событий' : sections[section].label;
+  const needsLiveData = ['overview', 'users', 'devices', 'events', 'transport'].includes(section);
   return <div className="app-layout">{menu && <button className="mobile-backdrop" aria-label="Закрыть меню" onClick={() => setMenu(false)}/>}
     <aside className={`sidebar ${menu ? 'mobile-open' : ''}`}><Brand/><div className="sidebar-label">ВАШЕ ПРОСТРАНСТВО</div><nav aria-label="Главная навигация">{Object.entries(sections).map(([key, value]) => <button key={key} className={`nav-item ${section === key ? 'active' : ''}`} onClick={() => navigate(key)} aria-current={section === key ? 'page' : undefined}><Icon name={value.icon}/><span>{value.label}</span>{key === 'devices' && data && <small>{data.devices.filter(device => device.enabled).length}</small>}</button>)}</nav><div className="sidebar-bottom"><div className="private-note"><Icon name="shield" size={19}/><div><strong>Личный сервер</strong><span>Доступ под вашим контролем</span></div></div><div className="account-row"><span className="avatar admin-avatar">А</span><div><strong>{auth.username}</strong><span>Администратор</span></div><button className="icon-button" aria-label="Выйти из панели" title="Выйти" onClick={logout}><Icon name="logout" size={18}/></button></div></div></aside>
     <div className="workspace"><header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" aria-label="Открыть меню" onClick={() => setMenu(true)}><Icon name="menu"/></button><span className="breadcrumb">Управление <Icon name="arrow" size={13}/><strong>{sections[section].label}</strong></span></div><div className="topbar-actions">{data && <Badge tone={data.status.consistent ? 'success' : 'warning'}>{data.status.consistent ? 'VPN работает' : 'Нужна проверка'}</Badge>}<ThemeButton dark={dark} onClick={() => setDark(!dark)}/></div></header>
-      <main className="main-content"><div className="page-heading"><div><div className="eyebrow">FREETURN MANAGER</div><h1>{title}</h1><p>{section === 'overview' ? 'Подключения близких и состояние сервера — в одном месте.' : section === 'users' ? 'Управляйте доступом для семьи и близких.' : section === 'events' ? 'Изменения доступа и подключения устройств.' : 'Отдельное подключение для каждого телефона и компьютера.'}</p></div><div className="page-actions">{['overview', 'events'].includes(section) ? <button className="button secondary" onClick={load} disabled={refreshing}><Icon name="refresh" size={17} className={refreshing ? 'spinning' : ''}/><span>Обновить</span></button> : <button className="button primary" onClick={() => setModal({ kind: section === 'users' ? 'new-user' : 'new-device' })} disabled={!data}><Icon name="plus" size={17}/>{section === 'users' ? 'Добавить пользователя' : 'Добавить устройство'}</button>}</div></div>
+      <main className="main-content"><div className="page-heading"><div><h1>{title}</h1><p>{sections[section].description}</p></div><div className="page-actions">{['users', 'devices'].includes(section) ? <button className="button primary" onClick={() => setModal({ kind: section === 'users' ? 'new-user' : 'new-device' })} disabled={!data}><Icon name="plus" size={17}/>{section === 'users' ? 'Добавить пользователя' : 'Добавить устройство'}</button> : section !== 'routing' && <button className="button secondary" onClick={refresh} disabled={refreshing}><Icon name="refresh" size={17} className={refreshing ? 'spinning' : ''}/><span>Обновить</span></button>}</div></div>
         {dataError && <div className="error-banner" role="alert"><Icon name="info"/><div><strong>Не удалось обновить данные</strong><span>{dataError}{data ? '. Показаны последние полученные значения.' : ''}</span></div><button className="button small secondary" onClick={load}>Повторить</button></div>}
-        {!data ? <div className="surface loading-state"><Icon name="refresh" className="spinning" size={27}/><strong>{dataError ? 'Ожидаем подключения к серверу' : 'Загружаем данные сервера'}</strong><span>Это займёт несколько секунд</span></div> : <>
-          {section !== 'overview' && <div className="table-toolbar"><label className="search-field"><Icon name="search" size={18}/><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder={section === 'users' ? 'Найти пользователя' : section === 'events' ? 'Найти событие или имя' : 'Найти устройство или адрес'} aria-label="Поиск"/></label>{section !== 'events' && <label className="checkbox-label"><input type="checkbox" checked={showDisabled} onChange={event => setShowDisabled(event.target.checked)}/>Показать отключённых</label>}<span className="result-count">{section === 'events' ? `Последние ${data.events.length} событий` : `${section === 'users' ? data.users.filter(user => user.enabled).length : data.devices.filter(device => device.enabled).length} с доступом`}</span></div>}
-          {section === 'overview' ? <Overview data={data} samples={samples} setSection={navigate} newUser={() => setModal({ kind: 'new-user' })}/> : section === 'users' ? <Users data={data} search={search} showDisabled={showDisabled} action={setModal} newUser={() => setModal({ kind: 'new-user' })}/> : section === 'events' ? <Events data={data} search={search}/> : <Devices data={data} search={search} showDisabled={showDisabled} action={setModal} newDevice={() => setModal({ kind: 'new-device' })}/>}
-          <div className="content-footer"><span><span className="live-dot"/> Данные с вашего сервера</span><span>Обновлено в {data.updated.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span></div>
+        {!data && needsLiveData ? <div className="surface loading-state"><Icon name="refresh" className="spinning" size={27}/><strong>{dataError ? 'Ожидаем подключения к серверу' : 'Загружаем данные сервера'}</strong><span>Это займёт несколько секунд</span></div> : <>
+          {['users', 'devices', 'events'].includes(section) && <div className="table-toolbar"><label className="search-field"><Icon name="search" size={18}/><input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder={section === 'users' ? 'Найти пользователя' : section === 'events' ? 'Найти событие или имя' : 'Найти устройство или адрес'} aria-label="Поиск"/></label>{section !== 'events' && <label className="checkbox-label"><input type="checkbox" checked={showDisabled} onChange={event => setShowDisabled(event.target.checked)}/>Показать отключённых</label>}<span className="result-count">{section === 'events' ? `Последние ${data.events.length} событий` : `${section === 'users' ? data.users.filter(user => user.enabled).length : data.devices.filter(device => device.enabled).length} с доступом`}</span></div>}
+          {section === 'overview' && <Overview data={data} samples={samples} setSection={navigate} newUser={() => setModal({ kind: 'new-user' })}/>}
+          {section === 'users' && <Users data={data} search={search} showDisabled={showDisabled} action={setModal} newUser={() => setModal({ kind: 'new-user' })}/>}
+          {section === 'devices' && <Devices data={data} search={search} showDisabled={showDisabled} action={setModal} newDevice={() => setModal({ kind: 'new-device' })}/>}
+          {section === 'events' && <Events data={data} search={search}/>}
+          {section === 'routing' && <RoutingPanel/>}
+          {section === 'subscriptions' && <Subscriptions revision={sectionRevision} action={setModal}/>}
+          {section === 'monitoring' && <Monitoring revision={sectionRevision} metrics={data?.metrics ?? {}}/>}
+          {section === 'transport' && <Transport status={data.status}/>}
+          {section === 'settings' && <Settings revision={sectionRevision} openRouting={() => navigate('routing')} toggleTheme={() => setDark(!dark)} dark={dark}/>}
+          {data && <div className="content-footer"><span><span className="live-dot"/> Данные с вашего сервера</span><span>Обновлено в {data.updated.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span></div>}
         </>}
       </main><footer className="workspace-footer"><span>FreeTurn Manager</span><span>Простое управление личной сетью</span></footer></div>
     {toast && <div className="toast" role="status"><span className="toast-icon"><Icon name="check" size={17}/></span>{toast}<button className="icon-button" aria-label="Закрыть уведомление" onClick={() => setToast('')}><Icon name="close" size={15}/></button></div>}
-    {modal && ['subscription-export', 'bootstrap-export'].includes(modal.kind) && <ExportForm kind={modal.kind} user={modal.item} onClose={() => setModal(null)} onDone={done}/>}
+    {modal && ['subscription-export', 'subscription-revoke', 'bootstrap-export'].includes(modal.kind) && <ExportForm kind={modal.kind} user={modal.item} onClose={() => setModal(null)} onDone={done}/>}
     {modal?.kind === 'new-user' && <UserForm onClose={() => setModal(null)} onDone={done}/>}
     {modal?.kind === 'new-device' && data && <DeviceForm users={data.users} onClose={() => setModal(null)} onDone={done}/>}
     {modal && ['users', 'devices'].includes(modal.kind) && <Confirm action={modal} onClose={() => setModal(null)} onDone={done}/>}

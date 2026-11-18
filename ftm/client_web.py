@@ -119,6 +119,13 @@ def install_routes(app, rpc, rpc_limit):
                               'source_ip': request.client.host if request.client else 'unknown'})
         return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
+    @app.get(PREFIX + "routing")
+    async def routing(request: Request, token=Depends(bearer)):
+        if request.headers.get("x-freeturn-capability") != "routing-bundle-v1":
+            raise ClientFault("invalid_request")
+        result = await invoke("client.routing", {"token": token, "capability": "routing-bundle-v1"})
+        return JSONResponse(result, headers={"Cache-Control": "private, no-store"})
+
     @app.get(PREFIX + "subscription")
     async def subscription(request: Request, token=Depends(bearer)):
         args = {"token": token}
